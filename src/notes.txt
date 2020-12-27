@@ -1,0 +1,18 @@
+I want to make this very decoupalable:
+- so that we can replace the physics engine, if that becomes the performance solution
+- so that we can experiment with a lot of different models for what the rules are
+
+Three layers:
+control: 'design tree', which is a conceptual "three of this limb" kind of thing,
+  potentially hot swap different design encodings
+data: 'phys tree', the design tree knows how to instantiate into a single
+  individual 
+control: 'ship control', running the automation of a ship as needed to supply the
+  physics inputs  
+data: physics api, don't bother with this until we need it, but plan to keep the
+    physics engine swappable by minimizing the surface area of this api
+control: physics engine
+
+
+
+
