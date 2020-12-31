@@ -11,7 +11,7 @@ class DesignBranch{
     
     static defaults(params = {}){ 
         return rangesMerge({
-            radius: new RangedValue(4, new Range(1, 256, null)),
+            radius: new RangedValue(64, new Range(16, 1024, null)),
             density: new RangedValue(0.3, new Range(0.01, 1, null)),
             sides: new RangedInteger(6, new Range(3, 12, null))
         }, params);
@@ -146,14 +146,14 @@ function sideRadius(sides, radius){
 }
 
 function seed(){
-    return new DesignBranch(DesignBranch.defaults({sides: 6}), 
+    return new DesignBranch(DesignBranch.defaults({radius:64, sides: 6}), 
         new DesignPayload("none"), [
             new ChildRelationship(ChildRelationship.defaults({after: -0.2, maxCount: 1, sortKey: 25,}), 
-                new DesignBranch(DesignBranch.defaults({radius:16}), new DesignPayload("none"), [])),
+                new DesignBranch(DesignBranch.defaults({radius:128}), new DesignPayload("none"), [])),
             new ChildRelationship(ChildRelationship.defaults({after: 0.5, maxCount: 3, sortKey: 75}),
-                new DesignBranch(DesignBranch.defaults({radius:3, sides: 3}), new DesignPayload("none"), [
+                new DesignBranch(DesignBranch.defaults({radius:32, sides: 3}), new DesignPayload("none"), [
                     new ChildRelationship(ChildRelationship.defaults({maxCount: 2}),
-                        new DesignBranch(DesignBranch.defaults({radius:2, sides: 3}), new DesignPayload("thruster"), []))]
+                        new DesignBranch(DesignBranch.defaults({radius:16, sides: 3}), new DesignPayload("thruster"), []))]
                 ))
         ]);
 }

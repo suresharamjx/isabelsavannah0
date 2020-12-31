@@ -1,37 +1,12 @@
 import {seed} from './design-tree.js'
+import {MatterJsPhysics} from './physics.js'
+import {ShipControl} from './ship-control.js'
 
-console.dir(seed());
-console.dir(seed().build(0, 0, true));
+let phys = new MatterJsPhysics();
+let parts = seed().build(0, 0, true);
+console.dir(parts);
+let ship = new ShipControl(parts, {}, phys);
 
-// module aliases
-var Engine = Matter.Engine,
-    Render = Matter.Render,
-    Runner = Matter.Runner,
-    Bodies = Matter.Bodies,
-    Composite = Matter.Composite;
-
-// create an engine
-var engine = Engine.create();
-
-// create a renderer
-var render = Render.create({
-    element: document.body,
-    engine: engine
-});
-
-// create two boxes and a ground
-var boxA = Bodies.rectangle(400, 200, 80, 80);
-var boxB = Bodies.rectangle(450, 50, 80, 80);
-var ground = Bodies.rectangle(400, 610, 810, 60, { isStatic: true });
-
-// add all of the bodies to the world
-Composite.add(engine.world, [boxA, boxB, ground]);
-
-// run the renderer
-Render.run(render);
-
-// create runner
-var runner = Runner.create();
-
-// run the engine
-Runner.run(runner, engine);
+ship.spawn();
+phys.stage();
+phys.render();
