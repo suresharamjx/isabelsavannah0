@@ -17,7 +17,11 @@ class DesignBranch{
         }, params);
     }
 
-    build(rotation, translation, root){
+    build(){
+        return this.buildR(0, 0, true);
+    }
+
+    buildR(rotation, translation, root){
         let mass = this.values.radius.value * this.values.radius.value;
         let block = new PhysBlock(this.values.sides.value, this.values.radius.value, mass, new PhysPayload(this.payload.type));
 
@@ -59,8 +63,8 @@ class DesignBranch{
                     let child = pair[1].select();
                     let ours = sideRadius(this.values.sides.value, this.values.radius.value);
                     let theirs = sideRadius(child.values.sides.value, child.values.radius.value);
-                    let childDistance = ours + theirs + Math.min(ours, theirs)/10;
-                    children.push(child.build(childAngle, childDistance, false));
+                    let childDistance = ours + theirs + Math.max(ours, theirs)/5;
+                    children.push(child.buildR(childAngle, childDistance, false));
                     break;
                 }
             }
@@ -145,8 +149,8 @@ function sideRadius(sides, radius){
     return adjacent;
 }
 
-function seed(){
-    return new DesignBranch(DesignBranch.defaults({radius:64, sides: 6}), 
+let seed = 
+    new DesignBranch(DesignBranch.defaults({radius:64, sides: 6}), 
         new DesignPayload("none"), [
             new ChildRelationship(ChildRelationship.defaults({after: -0.2, maxCount: 1, sortKey: 25,}), 
                 new DesignBranch(DesignBranch.defaults({radius:128}), new DesignPayload("none"), [])),
@@ -155,7 +159,6 @@ function seed(){
                     new ChildRelationship(ChildRelationship.defaults({maxCount: 2}),
                         new DesignBranch(DesignBranch.defaults({radius:16, sides: 3}), new DesignPayload("thruster"), []))]
                 ))
-        ]);
-}
+    ]);
 
 export {seed}

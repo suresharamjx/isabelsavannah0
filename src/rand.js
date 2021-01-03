@@ -6,6 +6,10 @@ function randInt(max){
     return Math.floor(Math.random() * max);
 }
 
+function randIntRange(min, max){
+    return min + randInt(max-min);
+}
+
 function randIntDecaying(max, rate){
     let soFar = 0;
     while(Math.random() < rate){
@@ -15,4 +19,4 @@ function randIntDecaying(max, rate){
     return soFar;
 }
 
-export {randFloat, randInt, randIntDecaying}
+export {randFloat, randInt, randIntDecaying, randIntRange}
