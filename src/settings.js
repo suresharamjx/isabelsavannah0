@@ -3,7 +3,7 @@ let defaults = {
         sides: 3,
         radius: 30,
         omega: .2,
-        rate: 0.001,
+        rate: 0.1,
         initial: 3,
     },
 

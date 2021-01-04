@@ -2,12 +2,40 @@ class MatterJsPhysics {
     constructor(settings){
         this.engine = Matter.Engine.create();
         this.settings = settings;
+        this.controllers = {};
     }
 
     stage(){
         this.engine.gravity.x = 0;
         this.engine.gravity.y = 0;
+        Matter.Events.on(this.engine, "collisionStart", x=>this.handleCollisionStart(x));
+        Matter.Events.on(this.engine, "collisionEnd", x=>this.handleCollisionEnd(x));
 	}
+
+    handleCollisionStart(event){
+        for(let pair of event.pairs){
+            let bodyA = pair.bodyA;
+            let bodyB = pair.bodyB;
+
+            let controllerA = this.controllers[bodyA.id];
+            let controllerB = this.controllers[bodyB.id];
+            if(!controllerA){
+                continue
+            }
+            if(!controllerB){
+                continue
+            }
+
+            if(controllerA.collisionControllerPriority < controllerB.collisionControllerPriority){
+                controllerB.handleCollisionWith(controllerA, pair);
+            }else{
+                controllerA.handleCollisionWith(controllerB, pair);
+            }
+        }
+    }
+
+    handleCollisionEnd(event){
+    }
 
     render(){
         let xSize = this.settings.field.xSize;
@@ -26,7 +54,7 @@ class MatterJsPhysics {
 		Matter.Render.run(this.render);
     }
 
-	drawPart(x, y, theta, physBlock){
+	drawPart(x, y, theta, physBlock, controller, extraOptions = {}){
         let sideAngle = Math.PI * 2 / physBlock.sides;
         let vertices = []
         for(let side = 0; side<physBlock.sides; side++){
@@ -39,13 +67,17 @@ class MatterJsPhysics {
             mass: physBlock.mass,
             vertices: vertices,
             frictionAir: 0,
+            sensor: !!extraOptions.sensor,
         });
+
+        this.controllers[body.id] = controller;
 		return body;
 	}
 
-    join(parts){
+    join(parts, controller){
 		let rootPart = Matter.Body.create();
 		Matter.Body.setParts(rootPart, parts);
+        this.controllers[rootPart.id] = controller;
         return rootPart;
     }
 
@@ -55,6 +87,11 @@ class MatterJsPhysics {
 
     tick(seconds){
         Matter.Engine.update(this.engine, seconds*1000);
+    }
+
+    remove(partRef){
+        delete this.controllers[partRef.id];
+        Matter.Composite.remove(this.engine.world, partRef);
     }
 
     setOmega(partRef, omega){

@@ -1,6 +1,8 @@
 class EntityControl{
-    constructor(sim){
+    constructor(sim, type){
         this.sim = sim;
+        this.collisionControllerPriority = 0;
+        this.type = type;
     }
 
     tick(){}
