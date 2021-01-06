@@ -150,13 +150,13 @@ function sideRadius(sides, radius){
 }
 
 let seed = 
-    new DesignBranch(DesignBranch.defaults({radius:64, sides: 6}), 
+    new DesignBranch(DesignBranch.defaults({radius:90, sides: 6}), 
         new DesignPayload("none"), [
             new ChildRelationship(ChildRelationship.defaults({after: -0.2, maxCount: 1, sortKey: 25,}), 
-                new DesignBranch(DesignBranch.defaults({radius:128}), new DesignPayload("none"), [])),
+                new DesignBranch(DesignBranch.defaults({radius:170, sides:3}), new DesignPayload("none"), [])),
             new ChildRelationship(ChildRelationship.defaults({after: 0.5, maxCount: 3, sortKey: 75}),
-                new DesignBranch(DesignBranch.defaults({radius:32, sides: 3}), new DesignPayload("none"), [
-                    new ChildRelationship(ChildRelationship.defaults({maxCount: 2}),
+                new DesignBranch(DesignBranch.defaults({radius:30, sides: 5}), new DesignPayload("none"), [
+                    new ChildRelationship(ChildRelationship.defaults({maxCount: 4}),
                         new DesignBranch(DesignBranch.defaults({radius:16, sides: 3}), new DesignPayload("thruster"), []))]
                 ))
     ]);

@@ -8,6 +8,7 @@ class Simulation{
         this.settings = settings;
         this.field = settings.field;
         this.controls = [];
+        this.liveFoods = [];
     }
 
     stage(){
@@ -33,8 +34,8 @@ class Simulation{
     }
 
     spawnFood(){
-        let x = randIntRange(this.field.xSize*-0.5, this.field.xSize*0.5);
-        let y = randIntRange(this.field.ySize*-0.5, this.field.ySize*0.5);
+        let x = randIntRange(this.field.xSize*-0.25, this.field.xSize*0.25);
+        let y = randIntRange(this.field.ySize*-0.25, this.field.ySize*0.25);
         let food = new FoodControl(this);
         food.spawn(x, y);
         this.controls.push(food);

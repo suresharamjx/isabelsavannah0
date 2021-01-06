@@ -4,23 +4,31 @@ import {PhysBlock, PhysPayload} from './phys-tree.js'
 class FoodControl extends EntityControl{
     constructor(sim){
         super(sim, 'food');
+        this.physics = sim.physics;
     }
 
     spawn(x, y){
         let set = this.sim.settings.food;
         let block = new PhysBlock(set.sides, set.radius, 1, new PhysPayload('food'));
-        this.blockRef = this.sim.physics.drawPart(x, y, 0, block, this, {sensor: true});
-        this.sim.physics.setOmega(this.blockRef, set.omega);
-        this.sim.physics.add(this.blockRef);
+        this.blockRef = this.physics.drawPart(x, y, 0, block, this, {sensor: true});
+        this.physics.setOmega(this.blockRef, set.omega);
+        this.physics.add(this.blockRef);
+        this.sim.liveFoods.push(this);
     }
 
-    remove(){
-        this.sim.physics.remove(this.blockRef);
+    destroy(){
+        this.physics.remove(this.blockRef);
+        this.sim.liveFoods.splice(this.sim.liveFoods.indexOf(this), 1);
+        super.destroy();
     }
 
     handleCollisionWith(other, pair){
-        this.remove();
-        other.remove();
+        this.destroy();
+        other.destroy();
+    }
+
+    getLocation(){
+        return this.physics.getLocation(this.blockRef);
     }
 }
 

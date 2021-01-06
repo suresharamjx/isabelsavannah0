@@ -2,15 +2,15 @@ let defaults = {
     food: {
         sides: 3,
         radius: 30,
-        omega: .2,
-        rate: 0.1,
+        omega: .1,
+        rate: 0.01,
         initial: 3,
     },
 
     field: {
-        xSize: 5000,
-        ySize: 5000,
-        renderScale: 5,
+        xSize: 2000,
+        ySize: 2000,
+        renderScale: 2,
     },
 
     physicsTickTime: 0.01,

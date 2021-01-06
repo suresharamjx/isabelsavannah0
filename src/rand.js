@@ -19,4 +19,9 @@ function randIntDecaying(max, rate){
     return soFar;
 }
 
-export {randFloat, randInt, randIntDecaying, randIntRange}
+function randChoice(array){
+    return array[randInt(array.length)];
+}
+
+
+export {randChoice, randFloat, randInt, randIntDecaying, randIntRange}

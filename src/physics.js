@@ -1,3 +1,5 @@
+import {modCircle} from './geometry.js'
+
 class MatterJsPhysics {
     constructor(settings){
         this.engine = Matter.Engine.create();
@@ -50,6 +52,9 @@ class MatterJsPhysics {
                 height: ySize/renderScale, 
                 width: xSize/renderScale,
                 hasBounds: true,
+                showAngleIndicator: true,
+                showPositions: true,
+                showIds: true,
             }});
 		Matter.Render.run(this.render);
     }
@@ -57,8 +62,9 @@ class MatterJsPhysics {
 	drawPart(x, y, theta, physBlock, controller, extraOptions = {}){
         let sideAngle = Math.PI * 2 / physBlock.sides;
         let vertices = []
+        let pointOffset = (physBlock.sides % 2 == 0 ? 0.5*sideAngle : 0)
         for(let side = 0; side<physBlock.sides; side++){
-            let vertexTheta = theta + (physBlock.sides % 2 == 0 ? (side+0.5)*sideAngle : side*sideAngle);
+            let vertexTheta = theta + side*sideAngle + pointOffset;
             vertices.push({x: physBlock.radius*Math.sin(vertexTheta), y: physBlock.radius*Math.cos(vertexTheta)});
         }
 
@@ -66,13 +72,18 @@ class MatterJsPhysics {
             position: {x: x, y: y},
             mass: physBlock.mass,
             vertices: vertices,
-            frictionAir: 0,
             sensor: !!extraOptions.sensor,
         });
 
         this.controllers[body.id] = controller;
 		return body;
 	}
+
+    generateForce(part, from, magnitude, direction, real = true){
+        let directedForce = {x: -1*magnitude*Math.sin(direction), y: magnitude*Math.cos(direction)};
+        if(real)
+        Matter.Body.applyForce(part, from, directedForce);
+    }
 
     join(parts, controller){
 		let rootPart = Matter.Body.create();
@@ -96,6 +107,18 @@ class MatterJsPhysics {
 
     setOmega(partRef, omega){
         Matter.Body.setAngularVelocity(partRef, omega);
+    }
+
+    getTheta(partRef){
+        return partRef.angle;
+    }
+
+    getLocation(partRef){
+        return partRef.position;
+    }
+
+    getId(partRef){
+        return partRef.id;
     }
 }
 
