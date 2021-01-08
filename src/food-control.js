@@ -10,7 +10,7 @@ class FoodControl extends EntityControl{
     spawn(x, y){
         let set = this.sim.settings.food;
         let block = new PhysBlock(set.sides, set.radius, 1, new PhysPayload('food'));
-        this.blockRef = this.physics.drawPart(x, y, 0, block, this, {sensor: true});
+        this.blockRef = this.physics.drawPart(x, y, 0, block, this, {sensor: true, fillStyle: "#53b327", frictionless: true});
         this.physics.setOmega(this.blockRef, set.omega);
         this.physics.add(this.blockRef);
         this.sim.liveFoods.push(this);

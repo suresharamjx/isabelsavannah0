@@ -1,7 +1,6 @@
 function navigate(currentLoc, targetLoc){
     let dx = targetLoc.x - currentLoc.x;
     let dy = targetLoc.y - currentLoc.y;
-    dy *= -1;
 
     if(dy == 0){
         return dx > 0 ? Math.PI/2 : 3*Math.PI/2;

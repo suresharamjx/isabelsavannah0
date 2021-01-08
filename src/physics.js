@@ -52,20 +52,24 @@ class MatterJsPhysics {
                 height: ySize/renderScale, 
                 width: xSize/renderScale,
                 hasBounds: true,
-                showAngleIndicator: true,
-                showPositions: true,
-                showIds: true,
+                //showAngleIndicator: true,
+                //showPositions: true,
+                //showIds: true,
+                wireframes: false,
             }});
 		Matter.Render.run(this.render);
     }
 
 	drawPart(x, y, theta, physBlock, controller, extraOptions = {}){
+        y = -y;
+
         let sideAngle = Math.PI * 2 / physBlock.sides;
         let vertices = []
         let pointOffset = (physBlock.sides % 2 == 0 ? 0.5*sideAngle : 0)
         for(let side = 0; side<physBlock.sides; side++){
             let vertexTheta = theta + side*sideAngle + pointOffset;
-            vertices.push({x: physBlock.radius*Math.sin(vertexTheta), y: physBlock.radius*Math.cos(vertexTheta)});
+
+            vertices.push({x: physBlock.radius*Math.sin(vertexTheta), y: -physBlock.radius*Math.cos(vertexTheta)});
         }
 
         let body = Matter.Body.create({
@@ -73,15 +77,19 @@ class MatterJsPhysics {
             mass: physBlock.mass,
             vertices: vertices,
             sensor: !!extraOptions.sensor,
+            frictionAir: extraOptions.frictionless ? 0 : 0.01,
+            render: {
+                fillStyle: extraOptions.fillStyle || "#3461eb",
+            }
         });
 
         this.controllers[body.id] = controller;
 		return body;
 	}
 
-    generateForce(part, from, magnitude, direction, real = true){
-        let directedForce = {x: -1*magnitude*Math.sin(direction), y: magnitude*Math.cos(direction)};
-        if(real)
+    generateForce(part, from, magnitude, direction){
+        from = this.transformPosition(from);
+        let directedForce = {x: magnitude*Math.sin(direction), y: -magnitude*Math.cos(direction)};
         Matter.Body.applyForce(part, from, directedForce);
     }
 
@@ -114,11 +122,23 @@ class MatterJsPhysics {
     }
 
     getLocation(partRef){
-        return partRef.position;
+        return this.transformPosition(partRef.position);
     }
 
     getId(partRef){
         return partRef.id;
+    }
+
+    transformPosition(position){
+        return {x: position.x, y: -position.y};
+    }
+
+    emph(partRef){
+        partRef.render.visible = true;
+    }
+
+    deemph(partRef){
+        partRef.render.visible = false;
     }
 }
 

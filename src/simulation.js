@@ -34,8 +34,8 @@ class Simulation{
     }
 
     spawnFood(){
-        let x = randIntRange(this.field.xSize*-0.25, this.field.xSize*0.25);
-        let y = randIntRange(this.field.ySize*-0.25, this.field.ySize*0.25);
+        let x = randIntRange(this.field.xSize*-0.40, this.field.xSize*0.40);
+        let y = randIntRange(this.field.ySize*-0.40, this.field.ySize*0.40);
         let food = new FoodControl(this);
         food.spawn(x, y);
         this.controls.push(food);

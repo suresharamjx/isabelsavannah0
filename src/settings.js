@@ -8,9 +8,9 @@ let defaults = {
     },
 
     field: {
-        xSize: 2000,
-        ySize: 2000,
-        renderScale: 2,
+        xSize: 3000,
+        ySize: 3000,
+        renderScale: 3,
     },
 
     physicsTickTime: 0.01,
