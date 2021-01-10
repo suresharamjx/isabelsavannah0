@@ -121,6 +121,10 @@ class MatterJsPhysics {
         return partRef.angle;
     }
 
+    getOmega(partRef){
+        return partRef.angularVelocity;
+    }
+
     getLocation(partRef){
         return this.transformPosition(partRef.position);
     }

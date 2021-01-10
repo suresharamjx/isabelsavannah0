@@ -28,7 +28,13 @@ class Simulation{
 
     spawnDesign(design){
         let phys = design.build();
-        let ship = new ShipControl(phys, {}, this);
+        let meta = {
+            angularControl: {
+                p: 0.05,
+                d: 0.5,
+            },
+        }
+        let ship = new ShipControl(phys, meta, this);
         ship.spawn();
         this.controls.push(ship);
     }

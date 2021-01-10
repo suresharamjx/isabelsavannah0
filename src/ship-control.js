@@ -55,7 +55,6 @@ class ShipControl extends EntityControl{
             let targetFood = randChoice(this.sim.liveFoods);
             this.targetLocation = targetFood.getLocation();
             targetFood.onDestroy(() => this.targetLocation = null);
-            console.log("Picked target location ", this.targetLocation);
         }
     }
 
@@ -100,6 +99,7 @@ class ShipControl extends EntityControl{
     }
 
     tick(){
+        console.log(this.physics.getOmega(this.shipRef));
         if(!this.targetLocation){
             this.pickMovementTarget();
         }
@@ -119,14 +119,28 @@ class ShipControl extends EntityControl{
                 this.forwardThrusters.map(x => this.physics.deemph(this.partRefMap[x]));
             }
 
+            this.angularControl();
+        }
+    }
 
-            if(turn > 0){
-                this.powerThrusters(this.rightThrusters, 0.01);
-                this.leftThrusters.map(x => this.physics.deemph(this.partRefMap[x]));
-            }else{
-                this.powerThrusters(this.leftThrusters, 0.01);
-                this.rightThrusters.map(x => this.physics.deemph(this.partRefMap[x]));
-            }
+    angularControl(){
+        let targetTheta = navigate(this.physics.getLocation(this.shipRef), this.targetLocation);
+        let currentTheta = this.physics.getTheta(this.shipRef);
+        let currentOmega = this.physics.getOmega(this.shipRef);
+        let error = modCircleDelta(targetTheta - currentTheta);
+
+        var control = 
+            this.designMeta.angularControl.p * error
+            + this.designMeta.angularControl.d * currentOmega * -1;
+
+        control = Math.min(control, 1);
+        control = Math.max(control, -1);
+        if(control > 0){
+            this.powerThrusters(this.rightThrusters, control);
+            this.leftThrusters.map(x => this.physics.deemph(this.partRefMap[x]));
+        }else{
+            this.powerThrusters(this.leftThrusters, -1*control);
+            this.rightThrusters.map(x => this.physics.deemph(this.partRefMap[x]));
         }
     }
 
@@ -135,7 +149,9 @@ class ShipControl extends EntityControl{
             let partRef = this.partRefMap[id];
             let thrusterLoc = this.physics.getLocation(partRef);
             let shipAngle = this.physics.getTheta(this.shipRef);
-            this.physics.emph(partRef);
+            if(power > 0.01){
+                this.physics.emph(partRef);
+            }
             this.physics.generateForce(this.shipRef, thrusterLoc, power, modCircle(shipAngle + this.angleOffsets[id] + Math.PI));
         }
     }
