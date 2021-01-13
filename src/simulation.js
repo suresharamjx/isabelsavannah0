@@ -34,9 +34,10 @@ class Simulation{
                 d: 0.5,
             },
         }
-        let ship = new ShipControl(phys, meta, this);
+        let ship = new ShipControl(phys, meta, this, this.settings);
         ship.spawn();
         this.controls.push(ship);
+        return ship;
     }
 
     spawnFood(){
@@ -45,21 +46,6 @@ class Simulation{
         let food = new FoodControl(this);
         food.spawn(x, y);
         this.controls.push(food);
-    }
-
-    async runRealtime(ticks){
-        for(let i=0; i<ticks; i++){
-            let last = Date.now();
-            this.tick();
-            let extraTime = this.settings.displayTickTime*1000 - (Date.now() - last)
-            if(extraTime > 0){
-                await this.sleep(extraTime);
-            }
-        }
-    }
-
-    sleep(ms){
-        return new Promise(resolve => setTimeout(resolve, ms));
     }
 }
 

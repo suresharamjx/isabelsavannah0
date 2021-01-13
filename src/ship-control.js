@@ -3,17 +3,22 @@ import {randChoice} from './rand.js'
 import {navigate, modCircle, modCircleDelta} from './geometry.js'
 
 class ShipControl extends EntityControl{
-    constructor(physTree, designMeta, sim){
+    constructor(physTree, designMeta, sim, settings){
         super(sim, 'ship');
         this.physTree = physTree;
         this.designMeta = designMeta;
         this.physics = sim.physics;
+        this.settings = settings;
         this.collisionControllerPriority = 2;
         this.targetLocation = null;
 
         this.physMap = {};
         this.partRefMap = {};
         this.angleOffsets = {};
+
+        this.storedFood = settings.ship.initialFood;
+        this.age = 0;
+        this.score = 0;
     }
 
     spawn(){
@@ -47,6 +52,7 @@ class ShipControl extends EntityControl{
     handleCollisionWith(other, pair){
         if(other.type === 'food'){
             other.destroy();
+            this.storedFood += this.settings.food.value;
         }
     }
 
@@ -91,15 +97,9 @@ class ShipControl extends EntityControl{
                 }
             }
         }
-        console.log("left", this.leftThrusters);
-        console.log("right", this.rightThrusters);
-        console.log("forward", this.forwardThrusters);
-        console.log("reverse", this.reverseThrusters);
-
     }
 
     tick(){
-        console.log(this.physics.getOmega(this.shipRef));
         if(!this.targetLocation){
             this.pickMovementTarget();
         }
@@ -120,6 +120,21 @@ class ShipControl extends EntityControl{
             }
 
             this.angularControl();
+        }
+
+        this.runFood()
+
+        this.age++;
+    }
+
+    runFood(){
+        let cost = this.settings.ship.metabolisim * (1 + this.age/this.settings.ship.agingBasis);
+        this.storedFood -= cost;
+
+        if(this.storedFood > this.settings.ship.scoreThreshold){
+            let scoreAmount = (this.storedFood - this.settings.ship.scoreThreshold)*this.settings.ship.scoringRatio;
+            this.storedFood -= scoreAmount;
+            this.score += scoreAmount;
         }
     }
 
@@ -154,6 +169,11 @@ class ShipControl extends EntityControl{
             }
             this.physics.generateForce(this.shipRef, thrusterLoc, power, modCircle(shipAngle + this.angleOffsets[id] + Math.PI));
         }
+    }
+
+    destroy(){
+        this.physics.remove(this.shipRef, true);
+        super.destroy();
     }
 }
 
