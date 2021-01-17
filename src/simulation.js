@@ -27,16 +27,12 @@ class Simulation{
     }
 
     spawnDesign(design){
-        let phys = design.build();
-        let meta = {
-            angularControl: {
-                p: 0.05,
-                d: 0.5,
-            },
-        }
-        let ship = new ShipControl(phys, meta, this, this.settings);
-        ship.spawn();
+        let x = randIntRange(this.field.xSize*-0.40, this.field.xSize*0.40);
+        let y = randIntRange(this.field.ySize*-0.40, this.field.ySize*0.40);
+        let phys = design.tree.build();
+        let ship = new ShipControl(phys, design.meta, this, this.settings);
         this.controls.push(ship);
+        ship.spawn(x, y);
         return ship;
     }
 

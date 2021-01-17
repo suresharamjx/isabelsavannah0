@@ -1,10 +1,8 @@
 class Range{
     constructor(min, max, target){
-        this.values = {
-            min: min,
-            max: max,
-            target: target
-        };
+        this.min = min;
+        this.max = max;
+        this.target = target;
     }
 }
 
@@ -12,7 +10,17 @@ class RangedValue{
     constructor(value, range){
         this.value = value;
         this.range = range;
+        this.integer = false;
     }
 }
 
-export {Range, RangedValue, RangedValue as RangedInteger}
+class RangedInteger{
+    constructor(value, range){
+        this.value = value;
+        this.range = range;
+        this.integer = true;
+    }
+}
+
+
+export {Range, RangedValue, RangedInteger}

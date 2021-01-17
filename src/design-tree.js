@@ -1,6 +1,109 @@
-import {randInt, randFloat, randIntDecaying} from './rand.js'
+import {randInt, randFloat, randIntDecaying, randChoice} from './rand.js'
 import {Range, RangedValue, RangedInteger} from './experiment-util.js'
 import {PhysBranch, PhysPayload, PhysBlock} from './phys-tree.js'
+
+class Design{
+    constructor(tree, meta){
+        this.tree = tree;
+        this.meta = meta;
+    }
+}
+
+function reproduceDesign(a, b, settings){
+    let result = new Design(reproduceTree(a.tree, b.tree, settings), reproduceValues(a.meta, b.meta, settings));
+    return result;
+}
+
+function reproducePayload(a, b, settings){
+    if(Math.random() < settings.mutationChance){
+        return new DesignPayload(randChoice(['none', 'thruster']));
+    }else{
+        return Math.random() < 0.5 ? a : b;
+    }
+}
+
+function reproduceTree(a, b, settings){
+    let keyedBranches = {};
+    for(let parent of [a, b]){
+        for(let child of parent.children){
+            let key = child.values.sortKey.value;
+            if(!(key in keyedBranches)){
+                keyedBranches[key] = [];
+            }
+            keyedBranches[key].push(child);
+        }
+    }
+
+    let targetKeys = Object.keys(keyedBranches);
+    if(Math.random() < settings.mutationChance){
+        let addlKey = randInt(0, 100);
+        if(!targetKeys.includes(addlKey)){
+            targetKeys.push(addlKey);
+        }
+    }
+
+    let newChildren = [];
+
+    for(let key of targetKeys){
+        let parents = keyedBranches[key];
+        if(!parents){
+            let newChild = new ChildRelationship(
+                ChildRelationship.defaults({sortKey: key}), 
+                new DesignBranch(DesignBranch.defaults(), new DesignPayload("none"), []));
+            newChildren.push(newChild);
+        }else if(parents.length == 1){
+            if(Math.random() < 0.5){
+                newChildren.push(parents[0]);
+            }
+        }else{
+            newChildren.push(reproduceChild(parents[0], parents[1], settings));
+        }
+    }
+
+    return new DesignBranch(
+        reproduceValues(a.values, b.values, settings),
+        reproducePayload(a.payload, b.payload, settings),
+        newChildren);
+}
+
+function reproduceValues(a, b, settings){
+    let result = {};
+    for(let key in a){
+        let aRVal = a[key];
+        let bRVal = b[key];
+        if(!aRVal.range){
+            result[key] = reproduceValues(aRVal, bRVal, settings);
+            continue;
+        }
+
+        let base = Math.random() < 0.5 ? aRVal.value : bRVal.value;
+        if(Math.random() < settings.mutationChance){
+            var mod = 2*Math.random() - 1;
+            if(Math.random() < 0.5){
+                mod *= (aRVal.range.max - aRVal.range.min);
+            }else{
+                mod *= base;
+            }
+            base += mod;
+        }
+        if(aRVal.integer){
+            let resultVal = Math.min(aRVal.range.max, Math.max(bRVal.range.min, Math.round(base)));
+            result[key] = new RangedInteger(resultVal, aRVal.range);
+        }else{
+            let resultVal = Math.min(aRVal.range.max, Math.max(aRVal.range.min, base));
+            result[key] = new RangedValue(resultVal, aRVal.range);
+        }
+    }
+
+    return result;
+}
+
+function reproduceChild(a, b, settings){
+    return new ChildRelationship(
+        reproduceValues(a.values, b.values, settings),
+        reproduceTree(a.child, b.child, settings)
+    );
+}
 
 class DesignBranch{
     constructor(values, payload, children){
@@ -149,7 +252,7 @@ function sideRadius(sides, radius){
     return adjacent;
 }
 
-let seed = 
+let seedTree = 
     new DesignBranch(DesignBranch.defaults({radius:90, sides: 6}), 
         new DesignPayload("none"), [
             new ChildRelationship(ChildRelationship.defaults({after: -0.2, maxCount: 1, sortKey: 25,}), 
@@ -161,4 +264,13 @@ let seed =
                 ))
     ]);
 
-export {seed}
+let seedMeta = {
+    angularControl: {
+        p: new RangedValue(0.05, new Range(0, 0.5, null)),
+        d: new RangedValue(0.5, new Range(0, 5, null)),
+    },
+}
+
+let seed = new Design(seedTree, seedMeta);
+
+export {seed, reproduceDesign}

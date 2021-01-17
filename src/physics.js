@@ -144,6 +144,10 @@ class MatterJsPhysics {
     deemph(partRef){
         partRef.render.visible = false;
     }
+
+    setLocation(partRef, x, y){
+        partRef.position = {x: x, y: -y};
+    }
 }
 
 export {MatterJsPhysics}

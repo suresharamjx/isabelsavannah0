@@ -17,18 +17,23 @@ let defaults = {
     pool: {
         population: 100,
         concurrent: 6,
+        spawnInterval: 100,
+        reproduceInterval: 1500,
     },
 
     ship: {
         initialFood: 10,
-        metabolisim: 0.03,
-        agingBasis: 1000,
+        metabolisim: 0.02,
+        agingBasis: 10000,
         scoringRatio: 0.001,
         scoreThreshold: 5,
     },
 
     physicsTickTime: 0.01,
-    displayTickTime: (1/60),
+    displayTickTime: (1/120),
+
+    mutationChance: 0.02,
+    mutationAmountMax: 0.2,
 }
 
 export {defaults}

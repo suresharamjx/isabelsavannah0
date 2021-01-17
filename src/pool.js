@@ -1,5 +1,6 @@
 import {Simulation} from './simulation.js'
 import {randChoice} from './rand.js'
+import {reproduceDesign} from './design-tree.js'
 
 class Pool{
     constructor(physics, settings, seeds){
@@ -13,7 +14,7 @@ class Pool{
         this.population = {};
         for(var i=0; i<settings.pool.population; i++){
             this.population[this.getId()] = {
-                design: randChoice(seeds),
+                design: reproduceDesign(randChoice(seeds), randChoice(seeds), settings),
                 runs: 0,
                 totalScore: 0,
             };
@@ -23,14 +24,61 @@ class Pool{
     }
 
     tick(){
-        if(this.tickCount % 300 == 0 && this.liveShips.length < this.settings.pool.concurrent){
+        if(this.tickCount % this.settings.pool.spawnInterval == 0 && this.liveShips.length < this.settings.pool.concurrent){
             this.spawn();
+        }
+
+        if(this.tickCount % this.settings.pool.reproduceInterval == 0){
+            this.reproduce();
         }
 
         this.handleDeath();
 
         this.tickCount++;
         this.sim.tick();
+    }
+
+    pickKeyForReproduce(){
+        let guess = randChoice(Object.keys(this.population));
+        for(let ship of this.liveShips){
+            if(ship.id == guess){
+                return this.pickKeyForReproduce();
+            }
+        }
+
+        return guess;
+    }
+
+    reproduce(){
+        let set = new Set();
+        while(set.size < 3){
+            set.add(this.pickKeyForReproduce());
+        }
+
+        let orderedKeys = Array.from(set);
+        orderedKeys.sort((a, b) => {
+            let av = this.population[a].runs == 0 ? 0 : this.population[a].totalScore / this.population[a].runs;
+            let bv = this.population[b].runs == 0 ? 0 : this.population[b].totalScore / this.population[b].runs;
+            return av - bv;
+        });
+
+        let describe = (id) => {
+            let shipDesc = this.population[id];
+            return ("ship " + id + " with average score " + (shipDesc.runs > 0 ? shipDesc.totalScore / shipDesc.runs : 0));
+        }
+
+        console.log("reproduction:", 
+            describe(orderedKeys[1]), 
+            "reproduces with", 
+            describe(orderedKeys[2]), 
+            ". child will replace", 
+            describe(orderedKeys[0]));
+
+        this.population[orderedKeys[0]] = {
+            design: reproduceDesign(this.population[orderedKeys[1]].design, this.population[orderedKeys[2]].design, this.settings),
+            runs: 0,
+            totalScore: 0,
+        };
     }
 
     spawn(){

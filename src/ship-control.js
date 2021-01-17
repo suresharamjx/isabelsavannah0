@@ -21,8 +21,8 @@ class ShipControl extends EntityControl{
         this.score = 0;
     }
 
-    spawn(){
-        this.partRefs = this.spawnBlocksAt(0, 0, 0, this.physTree).flat(Infinity);
+    spawn(x, y){
+        this.partRefs = this.spawnBlocksAt(x, y, 0, this.physTree).flat(Infinity);
         this.shipRef = this.physics.join(this.partRefs, this);
         this.mapThrusters();
         this.physics.add(this.shipRef);
@@ -145,8 +145,8 @@ class ShipControl extends EntityControl{
         let error = modCircleDelta(targetTheta - currentTheta);
 
         var control = 
-            this.designMeta.angularControl.p * error
-            + this.designMeta.angularControl.d * currentOmega * -1;
+            this.designMeta.angularControl.p.value * error
+            + this.designMeta.angularControl.d.value * currentOmega * -1;
 
         control = Math.min(control, 1);
         control = Math.max(control, -1);
