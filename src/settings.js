@@ -3,15 +3,15 @@ let defaults = {
         sides: 3,
         radius: 30,
         omega: .1,
-        rate: 0.02,
+        rate: 0.01,
         initial: 3,
         value: 10,
     },
 
     field: {
-        xSize: 5000,
-        ySize: 5000,
-        renderScale: 5,
+        xSize: 10000,
+        ySize: 10000,
+        renderScale: 10,
     },
 
     pool: {
@@ -23,8 +23,8 @@ let defaults = {
 
     ship: {
         initialFood: 10,
-        metabolisim: 0.02,
-        agingBasis: 10000,
+        metabolisim: 0.01,
+        agingBasis: 5000,
         scoringRatio: 0.001,
         scoreThreshold: 5,
     },
