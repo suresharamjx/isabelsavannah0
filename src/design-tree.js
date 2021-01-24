@@ -115,7 +115,7 @@ class DesignBranch{
     static defaults(params = {}){ 
         return rangesMerge({
             radius: new RangedValue(64, new Range(16, 1024, null)),
-            density: new RangedValue(0.3, new Range(0.01, 1, null)),
+            density: new RangedValue(1, new Range(0.1, 10, null)),
             sides: new RangedInteger(6, new Range(3, 12, null))
         }, params);
     }
@@ -125,7 +125,7 @@ class DesignBranch{
     }
 
     buildR(rotation, translation, root){
-        let mass = this.values.radius.value * this.values.radius.value;
+        let mass = this.values.radius.value * this.values.radius.value * this.values.density.value;
         let block = new PhysBlock(this.values.sides.value, this.values.radius.value, mass, new PhysPayload(this.payload.type));
 
         let sideAngle = 2*Math.PI/this.values.sides.value;
@@ -266,7 +266,7 @@ let seedTree =
 
 let seedMeta = {
     angularControl: {
-        p: new RangedValue(0.05, new Range(0, 0.5, null)),
+        p: new RangedValue(0.05, new Range(0, .5, null)),
         d: new RangedValue(0.5, new Range(0, 5, null)),
     },
 }

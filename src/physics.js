@@ -96,6 +96,13 @@ class MatterJsPhysics {
     join(parts, controller){
 		let rootPart = Matter.Body.create();
 		Matter.Body.setParts(rootPart, parts);
+        // fix inertia because matterjs is broken
+        let realAreaMoment = parts.map(x => {
+            let dx = x.position.x - rootPart.position.x;
+            let dy = x.position.y - rootPart.position.y;
+            return x.area * Math.sqrt(dx*dx + dy*dy);
+        }).reduce((x, y) => x+y, 0);
+        Matter.Body.setInertia(rootPart, realAreaMoment);
         this.controllers[rootPart.id] = controller;
         return rootPart;
     }

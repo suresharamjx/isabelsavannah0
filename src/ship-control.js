@@ -109,10 +109,10 @@ class ShipControl extends EntityControl{
             let currentTheta = this.physics.getTheta(this.shipRef);
             let turn = modCircleDelta(targetTheta - currentTheta);
             if(Math.abs(turn) < Math.PI/8){
-                this.powerThrusters(this.forwardThrusters, 20);
+                this.powerThrusters(this.forwardThrusters, 1);
                 this.reverseThrusters.map(x => this.physics.deemph(this.partRefMap[x]));
             }else if(Math.abs(turn) > Math.PI*7/8){
-                this.powerThrusters(this.reverseThrusters, 20);
+                this.powerThrusters(this.reverseThrusters, 1);
                 this.forwardThrusters.map(x => this.physics.deemph(this.partRefMap[x]));
             }else{
                 this.reverseThrusters.map(x => this.physics.deemph(this.partRefMap[x]));
@@ -150,6 +150,9 @@ class ShipControl extends EntityControl{
 
         control = Math.min(control, 1);
         control = Math.max(control, -1);
+        if(control > 1 || control < -1){
+            console.log(control);
+        }
         if(control > 0){
             this.powerThrusters(this.rightThrusters, control);
             this.leftThrusters.map(x => this.physics.deemph(this.partRefMap[x]));
@@ -164,10 +167,11 @@ class ShipControl extends EntityControl{
             let partRef = this.partRefMap[id];
             let thrusterLoc = this.physics.getLocation(partRef);
             let shipAngle = this.physics.getTheta(this.shipRef);
+            let thrusterPower = this.settings.ship.thrusterPowerMassRatio * partRef.mass * power;
             if(power > 0.01){
                 this.physics.emph(partRef);
             }
-            this.physics.generateForce(this.shipRef, thrusterLoc, power, modCircle(shipAngle + this.angleOffsets[id] + Math.PI));
+            this.physics.generateForce(this.shipRef, thrusterLoc, thrusterPower, modCircle(shipAngle + this.angleOffsets[id] + Math.PI));
         }
     }
 

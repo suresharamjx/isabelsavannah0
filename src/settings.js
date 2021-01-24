@@ -27,6 +27,7 @@ let defaults = {
         agingBasis: 5000,
         scoringRatio: 0.001,
         scoreThreshold: 5,
+        thrusterPowerMassRatio: 0.1,
     },
 
     physicsTickTime: 0.01,
