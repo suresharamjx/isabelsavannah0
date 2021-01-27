@@ -140,6 +140,10 @@ class MatterJsPhysics {
         return partRef.id;
     }
 
+    getMass(partRef){
+        return partRef.mass;
+    }
+
     transformPosition(position){
         return {x: position.x, y: -position.y};
     }

@@ -16,9 +16,11 @@ class ShipControl extends EntityControl{
         this.partRefMap = {};
         this.angleOffsets = {};
 
-        this.storedFood = settings.ship.initialFood;
+        this.storedFood = 0;
         this.age = 0;
         this.score = 0;
+
+        this.angleIntegralHistory = [];
     }
 
     spawn(x, y){
@@ -28,6 +30,7 @@ class ShipControl extends EntityControl{
         this.physics.add(this.shipRef);
 
         let tsets = [this.reverseThrusters, this.forwardThrusters, this.rightThrusters, this.leftThrusters];
+        this.storedFood = this.settings.ship.initialFood * this.physics.getMass(this.shipRef);
         tsets.map(y=>y.map(x => this.physics.deemph(this.partRefMap[x])));
     }
 
@@ -61,6 +64,7 @@ class ShipControl extends EntityControl{
             let targetFood = randChoice(this.sim.liveFoods);
             this.targetLocation = targetFood.getLocation();
             targetFood.onDestroy(() => this.targetLocation = null);
+            this.angleIntegralHistory = [];
         }
     }
 
@@ -83,6 +87,7 @@ class ShipControl extends EntityControl{
             let angleDelta = modCircleDelta(thrustAngle - partPositionAngle + Math.PI);
             let angleDeltaAbs = Math.abs(angleDelta);
             let thrustAngleAbs = Math.abs(modCircleDelta(thrustAngle));
+
             if(angleDeltaAbs < Math.PI/4 || angleDeltaAbs > (3*Math.PI/4)){
                 if(thrustAngleAbs <= Math.PI/2){
                     this.forwardThrusters.push(id);
@@ -108,10 +113,13 @@ class ShipControl extends EntityControl{
             let targetTheta = navigate(this.physics.getLocation(this.shipRef), this.targetLocation);
             let currentTheta = this.physics.getTheta(this.shipRef);
             let turn = modCircleDelta(targetTheta - currentTheta);
-            if(Math.abs(turn) < Math.PI/8){
-                this.powerThrusters(this.forwardThrusters, 1);
+            let maxDeviation = Math.PI/32;
+            if(Math.abs(turn) < maxDeviation){
+                let powerScale = (maxDeviation-Math.abs(turn))/maxDeviation;
+                this.powerThrusters(this.forwardThrusters, powerScale);
                 this.reverseThrusters.map(x => this.physics.deemph(this.partRefMap[x]));
-            }else if(Math.abs(turn) > Math.PI*7/8){
+            }else if(Math.abs(turn) > (Math.PI - maxDeviation)){
+                let powerScale = (maxDeviation-(Math.PI-Math.abs(turn)))/maxDeviation;
                 this.powerThrusters(this.reverseThrusters, 1);
                 this.forwardThrusters.map(x => this.physics.deemph(this.partRefMap[x]));
             }else{
@@ -128,7 +136,7 @@ class ShipControl extends EntityControl{
     }
 
     runFood(){
-        let cost = this.settings.ship.metabolisim * (1 + this.age/this.settings.ship.agingBasis);
+        let cost = this.settings.ship.metabolisim * (1 + this.age/this.settings.ship.agingBasis) * Math.max(this.settings.ship.massMetabolisimMin, this.physics.getMass(this.shipRef));
         this.storedFood -= cost;
 
         if(this.storedFood > this.settings.ship.scoreThreshold){
@@ -136,23 +144,31 @@ class ShipControl extends EntityControl{
             this.storedFood -= scoreAmount;
             this.score += scoreAmount;
         }
+
+        console.log(this.storedFood);
     }
 
     angularControl(){
         let targetTheta = navigate(this.physics.getLocation(this.shipRef), this.targetLocation);
         let currentTheta = this.physics.getTheta(this.shipRef);
-        let currentOmega = this.physics.getOmega(this.shipRef);
-        let error = modCircleDelta(targetTheta - currentTheta);
+        let currentOmega = this.physics.getOmega(this.shipRef) / Math.PI;
+        let error = modCircleDelta(targetTheta - currentTheta) / Math.PI; //put to a [-1, 1] scale
+
+        this.angleIntegralHistory.push(error);
+        if(this.angleIntegralHistory.length > this.designMeta.angularControl.ti){
+            this.angleIntegralHistory.pop();
+        }
+
+        let integralValue = this.angleIntegralHistory.reduce((x, y) => x+y, 0);
 
         var control = 
             this.designMeta.angularControl.p.value * error
-            + this.designMeta.angularControl.d.value * currentOmega * -1;
+            + this.designMeta.angularControl.d.value * currentOmega * -1
+            + this.designMeta.angularControl.i.value * integralValue;
 
         control = Math.min(control, 1);
         control = Math.max(control, -1);
-        if(control > 1 || control < -1){
-            console.log(control);
-        }
+
         if(control > 0){
             this.powerThrusters(this.rightThrusters, control);
             this.leftThrusters.map(x => this.physics.deemph(this.partRefMap[x]));
@@ -177,6 +193,7 @@ class ShipControl extends EntityControl{
 
     destroy(){
         this.physics.remove(this.shipRef, true);
+        this.sim.controls.splice(this.sim.controls.indexOf(this), 1);
         super.destroy();
     }
 }

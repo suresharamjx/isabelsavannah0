@@ -74,6 +74,8 @@ class Pool{
             ". child will replace", 
             describe(orderedKeys[0]));
 
+        console.dir("best ship", this.population[orderedKeys[0]]);
+
         this.population[orderedKeys[0]] = {
             design: reproduceDesign(this.population[orderedKeys[1]].design, this.population[orderedKeys[2]].design, this.settings),
             runs: 0,

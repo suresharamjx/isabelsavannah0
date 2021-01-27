@@ -34,7 +34,13 @@ function reproduceTree(a, b, settings){
         }
     }
 
-    let targetKeys = Object.keys(keyedBranches);
+    var targetKeys = Object.keys(keyedBranches);
+    if(Math.random() < settings.mutationChance){
+        let removed = randChoice(targetKeys);
+        delete keyedBranches[removed];
+        targetKeys = Object.keys(keyedBranches);
+    }
+
     if(Math.random() < settings.mutationChance){
         let addlKey = randInt(0, 100);
         if(!targetKeys.includes(addlKey)){
@@ -47,9 +53,14 @@ function reproduceTree(a, b, settings){
     for(let key of targetKeys){
         let parents = keyedBranches[key];
         if(!parents){
-            let newChild = new ChildRelationship(
-                ChildRelationship.defaults({sortKey: key}), 
-                new DesignBranch(DesignBranch.defaults(), new DesignPayload("none"), []));
+            let newRelationshipValues = reproduceValues(ChildRelationship.defaults(), ChildRelationship.defaults(), settings);
+            let newBranchValues = reproduceValues(DesignBranch.defaults(), DesignBranch.defaults(), settings);
+            newRelationshipValues.sortKey.value = key;
+
+            let newChild = new ChildRelationship({}, new DesignBranch({}, new DesignPayload(randChoice["none", "thruster"]), []));
+            newChild.values = newRelationshipValues;
+            newChild.child.values = newBranchValues;
+
             newChildren.push(newChild);
         }else if(parents.length == 1){
             if(Math.random() < 0.5){
@@ -84,6 +95,15 @@ function reproduceValues(a, b, settings){
             }else{
                 mod *= base;
             }
+            mod *= settings.mutationAmountMax;
+            if(aRVal.integer){
+                if(mod > 0){
+                    mod = Math.max(mod, 1);
+                }else if(mod < 0){
+                    mod = Math.min(mod, -1);
+                }
+            }
+
             base += mod;
         }
         if(aRVal.integer){
@@ -110,12 +130,13 @@ class DesignBranch{
         this.values = values;
         this.payload = payload;
         this.children = children;
+        children[0];
     } 
     
     static defaults(params = {}){ 
         return rangesMerge({
             radius: new RangedValue(64, new Range(16, 1024, null)),
-            density: new RangedValue(1, new Range(0.1, 10, null)),
+            density: new RangedValue(3, new Range(0.1, 10, null)),
             sides: new RangedInteger(6, new Range(3, 12, null))
         }, params);
     }
@@ -203,10 +224,10 @@ class ChildOffering{
             return 0;
         }
         if(sym < 0 && side > 0){
-            return sym * -1 * weight;
+            return (1+sym) * weight;
         }
         if(sym > 0 && side < 0){
-            return sym * weight;
+            return (1-sym) * weight;
         }
         return weight;
     }
@@ -253,21 +274,28 @@ function sideRadius(sides, radius){
 }
 
 let seedTree = 
-    new DesignBranch(DesignBranch.defaults({radius:90, sides: 6}), 
+    new DesignBranch(DesignBranch.defaults({radius:90, sides: 8}), 
         new DesignPayload("none"), [
             new ChildRelationship(ChildRelationship.defaults({after: -0.2, maxCount: 1, sortKey: 25,}), 
-                new DesignBranch(DesignBranch.defaults({radius:170, sides:3}), new DesignPayload("none"), [])),
-            new ChildRelationship(ChildRelationship.defaults({after: 0.5, maxCount: 3, sortKey: 75}),
-                new DesignBranch(DesignBranch.defaults({radius:30, sides: 5}), new DesignPayload("none"), [
+                new DesignBranch(DesignBranch.defaults({radius:170, sides:3}), new DesignPayload("none"), [
+                    new ChildRelationship(ChildRelationship.defaults({after: -0.5, maxCount: 2, sortKey: 75, symmetry: 0.9}),
+                        new DesignBranch(DesignBranch.defaults({radius:70, sides: 5}), new DesignPayload("none"), [
+                            new ChildRelationship(ChildRelationship.defaults({maxCount: 4}),
+                                new DesignBranch(DesignBranch.defaults({radius:30, sides: 3}), new DesignPayload("thruster"), []))]
+                        ))])),
+            new ChildRelationship(ChildRelationship.defaults({after: 0.5, maxCount: 5, sortKey: 75}),
+                new DesignBranch(DesignBranch.defaults({radius:40, sides: 5}), new DesignPayload("none"), [
                     new ChildRelationship(ChildRelationship.defaults({maxCount: 4}),
-                        new DesignBranch(DesignBranch.defaults({radius:16, sides: 3}), new DesignPayload("thruster"), []))]
+                        new DesignBranch(DesignBranch.defaults({radius:40, sides: 3}), new DesignPayload("thruster"), []))]
                 ))
     ]);
 
 let seedMeta = {
     angularControl: {
-        p: new RangedValue(0.05, new Range(0, .5, null)),
-        d: new RangedValue(0.5, new Range(0, 5, null)),
+        p: new RangedValue(0.08, new Range(0.001, 0.1, null)),
+        d: new RangedValue(1, new Range(0, 4, null)),
+        ti: new RangedInteger(150, new Range(10, 500, null)),
+        i: new RangedValue(0.003, new Range(0, 0.01, null)),
     },
 }
 
