@@ -144,8 +144,6 @@ class ShipControl extends EntityControl{
             this.storedFood -= scoreAmount;
             this.score += scoreAmount;
         }
-
-        console.log(this.storedFood);
     }
 
     angularControl(){
