@@ -45,7 +45,7 @@ class MatterJsPhysics {
         let renderScale = this.settings.field.renderScale;
         let corners = [-1, 1].map((xdir) => [-1, 1].map((ydir) => ({x: 0.5*xSize*xdir, y: 0.5*ySize*ydir}))).flat(2);
         this.render = Matter.Render.create({
-            element: document.body, 
+            element: document.getElementById('canvas'), 
             engine: this.engine, 
             bounds: Matter.Bounds.create(Matter.Vertices.create(corners)),
             options: {

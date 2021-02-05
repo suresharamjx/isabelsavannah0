@@ -2,11 +2,31 @@ import {randInt, randFloat, randIntDecaying, randChoice} from './rand.js'
 import {Range, RangedValue, RangedInteger} from './experiment-util.js'
 import {PhysBranch, PhysPayload, PhysBlock} from './phys-tree.js'
 
+let straight = '│';
+let branch = '├';
+let lastBranch = '└';
+let horiz = '─'
+let blank = ' ';
+
 class Design{
     constructor(tree, meta){
         this.tree = tree;
         this.meta = meta;
     }
+
+    pretty(){
+        let lines = this.tree.pretty('│');
+        let p = roundTo(this.meta.angularControl.p.value, 5);
+        let d = roundTo(this.meta.angularControl.d.value, 4);
+        let i = roundTo(this.meta.angularControl.i.value, 6);
+        let ti= roundTo(this.meta.angularControl.ti.value, 4);
+        lines.push(`angular control parameters - [p: ${p}, d: ${d}, i: ${i}, ti: ${ti}]`)
+        return lines;
+    }
+}
+
+function extendPrefix(prefix, next){
+    return prefix.replaceAll(branch, straight).replaceAll(lastBranch, blank) + next;
 }
 
 function reproduceDesign(a, b, settings){
@@ -49,6 +69,7 @@ function reproduceTree(a, b, settings){
     }
 
     let newChildren = [];
+    let spontaneousKeys = [];
 
     for(let key of targetKeys){
         let parents = keyedBranches[key];
@@ -57,7 +78,7 @@ function reproduceTree(a, b, settings){
             let newBranchValues = reproduceValues(DesignBranch.defaults(), DesignBranch.defaults(), settings);
             newRelationshipValues.sortKey.value = key;
 
-            let newChild = new ChildRelationship({}, new DesignBranch({}, new DesignPayload(randChoice["none", "thruster"]), []));
+            let newChild = new ChildRelationship({}, new DesignBranch({}, new DesignPayload(randChoice(["none", "thruster"])), []));
             newChild.values = newRelationshipValues;
             newChild.child.values = newBranchValues;
 
@@ -67,14 +88,22 @@ function reproduceTree(a, b, settings){
                 newChildren.push(parents[0]);
             }
         }else{
-            newChildren.push(reproduceChild(parents[0], parents[1], settings));
+            let newChild = reproduceChild(parents[0], parents[1], settings);
+            let newChildKey = newChild.values.sortKey.value;
+            if(key != newChildKey && (targetKeys.includes(newChildKey) || spontaneousKeys.includes(newChildKey))){
+                continue;
+            }
+            spontaneousKeys.push(newChildKey);
+            newChildren.push(newChild);
         }
     }
 
-    return new DesignBranch(
-        reproduceValues(a.values, b.values, settings),
+    let r = new DesignBranch(
+        {},
         reproducePayload(a.payload, b.payload, settings),
         newChildren);
+    r.values = reproduceValues(a.values, b.values, settings);
+    return r;
 }
 
 function reproduceValues(a, b, settings){
@@ -119,10 +148,31 @@ function reproduceValues(a, b, settings){
 }
 
 function reproduceChild(a, b, settings){
-    return new ChildRelationship(
-        reproduceValues(a.values, b.values, settings),
+    let r = new ChildRelationship(
+        {},
         reproduceTree(a.child, b.child, settings)
     );
+    r.values = reproduceValues(a.values, b.values, settings);
+    return r;
+}
+
+function polygonName(n){
+    switch(n) {
+        case 3: return 'triangle'
+        case 4: return 'square'
+        case 5: return 'pentagon'
+        case 6: return 'hexagon'
+        case 7: return 'heptagon'
+        case 8: return 'octagon'
+        case 9: return 'nonagon'
+        case 10: return 'decagon'
+        default: return (n+"-gon")
+    }
+}
+
+function roundTo(n, places){
+    let factor = 10**places;
+    return Math.round(n*factor)/factor;
 }
 
 class DesignBranch{
@@ -140,6 +190,24 @@ class DesignBranch{
             sides: new RangedInteger(6, new Range(3, 12, null))
         }, params);
     }
+
+    pretty(prefix){
+        var me = `a radius ${Math.round(this.values.radius.value)} ${polygonName(this.values.sides.value)}, density ${roundTo(this.values.density.value, 1)}`
+        if(this.payload.type != 'none'){
+            me += ' carrying a ' + this.payload.type;
+        }
+
+        let lines = [prefix+me];
+        for(let i in this.children){
+            let child = this.children[i];
+            for(let line of child.pretty(extendPrefix(prefix, (i == this.children.length - 1 ? lastBranch : branch)))){
+                lines.push(line);
+            }
+        }
+
+        return lines;
+    }
+
 
     build(){
         return this.buildR(0, 0, true);
@@ -249,13 +317,49 @@ class ChildRelationship{
             maxCount: new RangedInteger(1, new Range(1, 64, null)),
             symmetry: new RangedValue(0, new Range(-1, 1, null)),
             after: new RangedValue(0, new Range(-1, 1, null)),
-            weight: new RangedValue(1, new Range(0, 1, null)),
+            weight: new RangedValue(0.9, new Range(0, 1, null)),
             sortKey: new RangedInteger(50, new Range(1, 100, null))
         }, params);
     }
 
     offering(){
         return new ChildOffering(this, this.child);
+    }
+
+    pretty(prefix){
+        let count = `up to ${this.values.maxCount.value} copies`;
+
+        let symmetryVal = this.values.symmetry.value;
+        var symmetry = null;
+        if(symmetryVal == 0){
+            symmetry = 'symmetrically distributed';
+        }else if(symmetryVal > 0){
+            symmetry = `biased ${roundTo(symmetryVal, 2)} rightwards`;
+        }else{
+            symmetry = `biased ${roundTo(-symmetryVal, 2)} leftwards`;
+        }
+
+        let angleVal = this.values.after.value;
+        let angleDeg = Math.round(angleVal/Math.PI*180);
+        var angle = null;
+        if(angleDeg >= 0){
+            angle = `after ${angleDeg} degrees`;
+        }else{
+            angle = `before ${-angleDeg} degrees`;
+        }
+
+        let weight = roundTo(this.values.weight.value, 2);
+        let sortKey = this.values.sortKey.value;
+
+        let me = `${count} of a child, ${symmetry}, ${angle}, with chance ${weight}, dedupe key ${sortKey}`;
+        let mine = prefix + me;
+
+        let lines = [mine];
+        for(let line of this.child.pretty(extendPrefix(prefix, lastBranch))){
+            lines.push(line);
+        }
+
+        return lines;
     }
 }
 

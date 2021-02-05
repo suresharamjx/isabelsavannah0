@@ -13,13 +13,10 @@ class Simulation{
 
     stage(){
         this.physics.stage();
-        for(let i=0; i<this.settings.food.initial; i++){
-            this.spawnFood();
-        }
     }
 
     tick(){
-        if(Math.random() <= this.settings.food.rate){
+        if(this.liveFoods.length < this.settings.food.concurrent){
             this.spawnFood();
         }
         this.controls.map(x => x.tick());

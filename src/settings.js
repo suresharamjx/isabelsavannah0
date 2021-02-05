@@ -3,26 +3,28 @@ let defaults = {
         sides: 3,
         radius: 30,
         omega: .1,
-        rate: 0.03,
+        concurrent: 20,
         initial: 3,
         value: 2000,
     },
 
     field: {
-        xSize: 7000,
-        ySize: 7000,
-        renderScale: 7,
+        xSize: 10000,
+        ySize: 10000,
+        renderScale: 10,
     },
 
     pool: {
-        population: 200,
-        concurrent: 5,
-        spawnInterval: 200,
-        reproduceInterval: 3000,
+        recordsStable: 300,
+        recordsUnstable: 20,
+        concurrentPopulation: 8,
+        concurrentStablePopulation: 2,
+        stableRuns: 5,
+        minStableForReproduction: 40,
     },
 
     ship: {
-        initialFood: 0.01,
+        initialFood: 0.03,
         metabolisim: 0.00002,
         agingBasis: 5000,
         scoringRatio: 0.001,
@@ -34,7 +36,7 @@ let defaults = {
     physicsTickTime: 0.01,
     displayTickTime: (1/120),
 
-    mutationChance: 0.01,
+    mutationChance: 0.001,
     mutationAmountMax: 0.2,
 }
 

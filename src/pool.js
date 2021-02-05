@@ -1,6 +1,53 @@
 import {Simulation} from './simulation.js'
-import {randChoice} from './rand.js'
+import {randChoice, randInt} from './rand.js'
 import {reproduceDesign} from './design-tree.js'
+
+let allocateId = (() => {
+    var lastId = 0;
+    return () => {
+        lastId++;
+        return lastId;
+    };
+})();
+
+class DesignRecord{
+    constructor(design, settings){
+        this.design = design;
+        this.settings = settings;
+        this.runs = 0;
+        this.totalScore = 0;
+        this.id = allocateId();
+    }
+
+    getScore(){
+        if(this.runs == 0){
+            return 0;
+        }else{
+            return this.totalScore / this.runs;
+        }
+    }
+
+    recordScore(score){
+        this.totalScore += score;
+        this.runs++;
+        //console.log(`Design ${this.id} got score ${score} (${this.getScore()} average over ${this.runs} runs)`);
+    }
+
+    stable(){
+        return this.settings.pool.stableRuns <= this.runs;
+    }
+}
+
+class DesignRun{
+    constructor(record, control){
+        this.record = record;
+        this.control = control;
+    }
+}
+
+function announce(text){
+    document.getElementById('sidebar').innerHTML = text;
+}
 
 class Pool{
     constructor(physics, settings, seeds){
@@ -8,107 +55,121 @@ class Pool{
         this.sim = new Simulation(physics, settings);
         this.tickCount = 0;
         this.sim.stage();
-
         this.nextId = 0;
+        this.seeds = seeds;
 
-        this.population = {};
-        for(var i=0; i<settings.pool.population; i++){
-            this.population[this.getId()] = {
-                design: reproduceDesign(randChoice(seeds), randChoice(seeds), settings),
-                runs: 0,
-                totalScore: 0,
-            };
-        }
+        this.stablePopulation = [];
+        this.unstablePopulation = [];
+        this.livePopulation = [];
 
-        this.liveShips = [];
+        this.tickCount = 0;
     }
 
-    tick(){
-        if(this.tickCount % this.settings.pool.spawnInterval == 0 && this.liveShips.length < this.settings.pool.concurrent){
-            this.spawn();
+    updatePopulations(){
+        let newlyStable = [];
+        let remainingUnstable = [];
+
+        for(let record of this.unstablePopulation){
+            (record.stable() ? newlyStable : remainingUnstable).push(record);
         }
 
-        if(this.tickCount % this.settings.pool.reproduceInterval == 0){
+        if(newlyStable.length > 0){
+            for(let record of newlyStable){
+                this.stablePopulation.push(record);
+                //console.log(`Design ${record.id} is now stable with score ${Math.round(record.getScore())}`);
+            }
+            this.unstablePopulation = remainingUnstable;
+            this.stablePopulation.sort((a, b) => b.getScore() - a.getScore());
+            this.stablePopulation = this.stablePopulation.splice(0, this.settings.pool.recordsStable);
+            //console.log("Stable design scores:", describe(this.stablePopulation.map((record) => record.getScore())));
+        }
+
+        while(this.unstablePopulation.length < this.settings.pool.recordsUnstable){
             this.reproduce();
         }
-
-        this.handleDeath();
-
-        this.tickCount++;
-        this.sim.tick();
     }
 
-    pickKeyForReproduce(){
-        let guess = randChoice(Object.keys(this.population));
-        for(let ship of this.liveShips){
-            if(ship.id == guess){
-                return this.pickKeyForReproduce();
-            }
+    pickForReproduction(){
+        if(this.stablePopulation.length < this.settings.pool.minStableForReproduction){
+            console.log("Reproducing from seeds because not enough stable population");
+            return randChoice(this.seeds);
+        }else{
+            let index = Math.min(randInt(this.stablePopulation.length), randInt(this.stablePopulation.length));
+            console.log(`Reproducing from design ${this.stablePopulation[index].id} from stable index ${index}/${this.stablePopulation.length}, score ${this.stablePopulation[index].getScore()}`);
+            return this.stablePopulation[index].design;
         }
-
-        return guess;
     }
 
     reproduce(){
-        let set = new Set();
-        while(set.size < 3){
-            set.add(this.pickKeyForReproduce());
+        let newDesign = reproduceDesign(this.pickForReproduction(), this.pickForReproduction(), this.settings);
+        this.unstablePopulation.push(new DesignRecord(newDesign, this.settings));
+    }
+
+    tick(){
+        if(this.livePopulation.length < this.settings.pool.concurrentPopulation){
+            this.updatePopulations();
+            this.spawn();
         }
 
-        let orderedKeys = Array.from(set);
-        orderedKeys.sort((a, b) => {
-            let av = this.population[a].runs == 0 ? 0 : this.population[a].totalScore / this.population[a].runs;
-            let bv = this.population[b].runs == 0 ? 0 : this.population[b].totalScore / this.population[b].runs;
-            return av - bv;
-        });
-
-        let describe = (id) => {
-            let shipDesc = this.population[id];
-            return ("ship " + id + " with average score " + (shipDesc.runs > 0 ? shipDesc.totalScore / shipDesc.runs : 0));
+        if(this.tickCount % 100 == 0){
+            let descr = describe(this.stablePopulation.map((record) => record.getScore()));
+            let unstableScores = this.unstablePopulation.map((record) => record.getScore())
+            unstableScores.sort();
+            unstableScores.reverse();
+            let lines = [
+                `Ticks elapsed: ${this.tickCount}`,
+                `Unstable population score summary: ${describe(unstableScores)}`,
+                `  Stable population score summary: ${descr}`
+            ]
+            if(this.stablePopulation.length > 0){
+                let exemplar = this.stablePopulation[0];
+                lines.push('');
+                lines.push(`best design is #${exemplar.id}, with ${Math.round(exemplar.getScore())} avg score over ${exemplar.runs} runs.`);
+                lines.push('');
+                lines.push('its genome is:');
+                for(let line of this.stablePopulation[0].design.pretty(0)){
+                    lines.push(line);
+                }
+            }
+            announce(lines.join("<br>"));
         }
 
-        console.log("reproduction:", 
-            describe(orderedKeys[1]), 
-            "reproduces with", 
-            describe(orderedKeys[2]), 
-            ". child will replace", 
-            describe(orderedKeys[0]));
-
-        console.dir("best ship", this.population[orderedKeys[0]]);
-
-        this.population[orderedKeys[0]] = {
-            design: reproduceDesign(this.population[orderedKeys[1]].design, this.population[orderedKeys[2]].design, this.settings),
-            runs: 0,
-            totalScore: 0,
-        };
+        this.handleDeath();
+        this.sim.tick();
+        this.tickCount++;
     }
 
     spawn(){
-        let choice = randChoice(Object.keys(this.population));
-        let ship = this.sim.spawnDesign(this.population[choice].design);
-        this.liveShips.push({id: choice, ship: ship});
+        let currentLiveStable = this.livePopulation.filter(x => x.record.stable()).length;
+        var choice = null;
+        if(currentLiveStable < this.settings.pool.concurrentStablePopulation
+            && this.stablePopulation.length > 0){
+            let index = Math.min(randInt(this.stablePopulation.length), randInt(this.stablePopulation.length));
+            console.log(`Spawning design ${this.stablePopulation[index].id} from stable index ${index}/${this.stablePopulation.length}`);
+            choice = this.stablePopulation[index];
+        }else{
+            choice = randChoice(this.unstablePopulation);
+            console.log(`Spawning an unstable design ${choice.id}`);
+        }
+
+        let ship = this.sim.spawnDesign(choice.design);
+        this.livePopulation.push(new DesignRun(choice, ship));
     }
 
     handleDeath(){
         let deadShips = [];
         let newLiveShips = [];
-        for(let ship of this.liveShips){
-            if(ship.ship.storedFood > 0){
-                newLiveShips.push(ship);
+        for(let run of this.livePopulation){
+            if(run.control.storedFood > 0){
+                newLiveShips.push(run);
             }else{
-                deadShips.push(ship);
+                deadShips.push(run);
             }
         }
 
-        this.liveShips = newLiveShips;
-        deadShips.map(x => this.score(x));
-        deadShips.map(x => x.ship.destroy());
-    }
-
-    score(ship){
-        this.population[ship.id].runs++;
-        this.population[ship.id].totalScore += ship.ship.score;
-        console.log("Ship", ship.id, "died with score", ship.ship.score);
+        this.livePopulation = newLiveShips;
+        deadShips.map(x => x.record.recordScore(x.control.score));
+        deadShips.map(x => x.control.destroy());
     }
 
     async runRealtime(ticks){
@@ -125,10 +186,21 @@ class Pool{
     sleep(ms){
         return new Promise(resolve => setTimeout(resolve, ms));
     }
+}
 
-    getId(){
-        this.nextId++;
-        return this.nextId;
+function describe(arry){
+    if(arry.length > 10){
+        let mean = Math.round(arry.reduce((x, y) => x+y)/arry.length);
+        let median = Math.round(arry[Math.round(arry.length/2)]);
+        let p90 = Math.round(arry[Math.round(arry.length/10)]);
+        let p10 = Math.round(arry[Math.round(9*arry.length/10)]);
+        let p25 = Math.round(arry[Math.round(3*arry.length/4)]);
+        let p75 = Math.round(arry[Math.round(arry.length/4)]);
+        let min = Math.round(arry[arry.length-1]);
+        let max = Math.round(arry[0]);
+        return `mean ${mean}, count ${arry.length}, [max: ${max}, p90: ${p90}, p75: ${p75}, p50: ${median}, p25: ${p25}, p10: ${p10}, min: ${min}]`;
+    }else{
+        return '[' + arry.map(Math.round).join(', ') + ']';
     }
 }
 

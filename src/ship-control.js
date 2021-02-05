@@ -191,6 +191,9 @@ class ShipControl extends EntityControl{
 
     destroy(){
         this.physics.remove(this.shipRef, true);
+        if(this.sim.controls.indexOf(this) == -1){
+            0()();
+        }
         this.sim.controls.splice(this.sim.controls.indexOf(this), 1);
         super.destroy();
     }
