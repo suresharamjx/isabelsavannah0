@@ -15,7 +15,7 @@ let defaults = {
     },
 
     pool: {
-        recordsStable: 300,
+        recordsStable: 1000,
         recordsUnstable: 20,
         concurrentPopulation: 8,
         concurrentStablePopulation: 2,
