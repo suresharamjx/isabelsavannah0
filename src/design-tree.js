@@ -20,7 +20,7 @@ class Design{
         let d = roundTo(this.meta.angularControl.d.value, 4);
         let i = roundTo(this.meta.angularControl.i.value, 6);
         let ti= roundTo(this.meta.angularControl.ti.value, 4);
-        lines.push(`angular control parameters - [p: ${p}, d: ${d}, i: ${i}, ti: ${ti}]`)
+        lines.push(`angular control parameters: [p: ${p}, d: ${d}, i: ${i}, ti: ${ti}]`)
         return lines;
     }
 }
