@@ -22,7 +22,7 @@ class FoodControl extends EntityControl{
         super.destroy();
     }
 
-    handleCollisionWith(other, pair){
+    handleCollisionBeforeWith(other, pair){
         this.destroy();
         other.destroy();
     }

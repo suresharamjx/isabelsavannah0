@@ -31,6 +31,7 @@ let defaults = {
         scoreThreshold: 5,
         thrusterPowerMassRatio: 0.04,
         massMetabolisimMin: 10000,
+        collisionDamagePerTick: 1,//0.1,
     },
 
     physicsTickTime: 0.01,

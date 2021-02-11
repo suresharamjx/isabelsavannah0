@@ -2,6 +2,28 @@ import {EntityControl} from './entity-control.js'
 import {randChoice} from './rand.js'
 import {navigate, modCircle, modCircleDelta} from './geometry.js'
 
+class PartControl{
+    constructor(parentControl, id, partRef, children){
+        this.id = id;
+        this.children = children;
+        this.parentControl = parentControl;
+        this.health = parentControl.physics.getMass(partRef);
+    }
+
+    damage(amount){
+        this.health -= amount;
+        if(this.health <= 0){
+            this.destroy();
+            this.parentControl.trim();
+        }
+    }
+
+    destroy(){
+        this.children.map(child => child.destroy);
+        this.parentControl.removePart(this.id);
+    }
+}
+
 class ShipControl extends EntityControl{
     constructor(physTree, designMeta, sim, settings){
         super(sim, 'ship');
@@ -15,6 +37,7 @@ class ShipControl extends EntityControl{
         this.physMap = {};
         this.partRefMap = {};
         this.angleOffsets = {};
+        this.partControlMap = {};
 
         this.storedFood = 0;
         this.age = 0;
@@ -24,7 +47,9 @@ class ShipControl extends EntityControl{
     }
 
     spawn(x, y){
-        this.partRefs = this.spawnBlocksAt(x, y, 0, this.physTree).flat(Infinity);
+        let controlCollector = []
+        this.partRefs = this.spawnBlocksAt(x, y, 0, this.physTree, controlCollector).flat(Infinity);
+        this.rootPartControl = controlCollector[0];
         this.shipRef = this.physics.join(this.partRefs, this);
         this.mapThrusters();
         this.physics.add(this.shipRef);
@@ -34,7 +59,7 @@ class ShipControl extends EntityControl{
         tsets.map(y=>y.map(x => this.physics.deemph(this.partRefMap[x])));
     }
 
-	spawnBlocksAt(turtleX, turtleY, turtleTheta, physTree){
+	spawnBlocksAt(turtleX, turtleY, turtleTheta, physTree, parentsChildCollector){
 		let newTheta = turtleTheta + physTree.rotation;
 		let newX = turtleX + Math.sin(newTheta)*physTree.translation;
 		let newY = turtleY + Math.cos(newTheta)*physTree.translation;
@@ -47,16 +72,107 @@ class ShipControl extends EntityControl{
         this.partRefMap[id] = partRef;
         this.angleOffsets[id] = newTheta;
 
-		let childPartRefs = physTree.children.map(branch => this.spawnBlocksAt(newX, newY, newTheta, branch));
+        let childCollector = [];
+		let childPartRefs = physTree.children.map(branch => this.spawnBlocksAt(newX, newY, newTheta, branch, childCollector));
+
+        let partControl = new PartControl(this, id, partRef, childCollector);
+        parentsChildCollector.push(partControl);
+
+        this.partControlMap[id] = partControl;
 
         return [partRef, childPartRefs];
 	}
 
-    handleCollisionWith(other, pair){
+    handleCollisionBeforeWith(other, pair){
         if(other.type === 'food'){
             other.destroy();
             this.storedFood += this.settings.food.value;
         }
+    }
+
+    handleCollisionActiveWith(other, pair){
+        if(other.type === 'ship'){
+            this.doCollision(other, pair);
+        }
+    }
+
+    handleCollisionAfterWith(other, pair){
+        if(other.type === 'ship'){
+            this.doCollision(other, pair);
+        }
+    }
+
+    removePart(id){
+        let partRef = this.partRefMap[id];
+        if(!partRef){
+            return;
+        }
+        this.physics.remove(partRef);
+        delete this.physMap[id];
+        delete this.partRefMap[id];
+        delete this.angleOffsets[id];
+        delete this.partControlMap[id];
+        for(let thrusterList of [this.forwardThrusters, this.reverseThrusters, this.rightThrusters, this.leftThrusters]){
+            let index = thrusterList.indexOf(id);
+            if(index >= 0){
+                thrusterList.splice(index, 1);
+            }
+        }
+    }
+
+    trim(){
+        this.physics.rejoin(this.shipRef, Object.values(this.partRefMap));
+    }
+
+    doCollision(other, pair){
+        let myPart = this.physics.getId(pair.bodyA); // if we are both same entity type, we are guarenteed to be body a
+        let theirPart = this.physics.getId(pair.bodyB);
+
+        let myPartRef = this.partRefMap[myPart];
+        let theirPartRef = other.partRefMap[theirPart];
+
+        var myStrength = this.collisionStrength(myPartRef, theirPartRef);
+        var theirStrength = other.collisionStrength(theirPartRef, myPartRef);
+
+        if(myStrength == 0 && theirStrength == 0){
+            myStrength = 1;
+            theirStrength = 1;
+        }
+
+        let scale = myStrength + theirStrength;
+        myStrength /= scale;
+        theirStrength /= scale;
+
+        if(myStrength < 0.1){
+            myStrength = 0.1;
+            theirStrength = 0.9;
+        }else if(myStrength > 0.9){
+            myStrength = 0.9;
+            theirStrength = 0.1;
+        }
+
+        let myPartControl = this.partControlMap[myPart];
+        let theirPartControl = this.partControlMap[myPart];
+
+        let totalDamage = Math.min(myPartControl.health/theirStrength, theirPartControl.health/myStrength);
+
+        myPartControl.damage(totalDamage*theirStrength/this.settings.ship.collisionDamagePerTick);
+        theirPartControl.damage(totalDamage*myStrength/this.settings.ship.collisionDamagePerTick);
+    }
+
+
+    collisionStrength(from, to){
+        let directionAngle = navigate(this.physics.getLocation(from), this.physics.getLocation(to));
+        let shipVelocity = this.physics.getVelocity(this.shipRef);
+        let momentumAngle = navigate({x:0, y:0}, shipVelocity);
+        let angleDelta = modCircleDelta(directionAngle - momentumAngle);
+
+        if(Math.abs(angleDelta) > (Math.PI/2)){
+            return 0;
+        }
+
+        let velocityMagnitude = (shipVelocity.x ** 2 + shipVelocity.y ** 2) ** 0.5;
+        return velocityMagnitude * this.physics.getMass(from) * Math.cos(angleDelta);
     }
 
     pickMovementTarget(){

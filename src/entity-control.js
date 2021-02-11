@@ -19,6 +19,18 @@ class EntityControl{
     onDestroy(callback){
         this.destroyCallbacks.push(callback);
     }
+
+    handleCollisionAfterWith(other, pair){
+
+    }
+
+    handleCollisionActiveWith(other, pair){
+
+    }
+
+    handleCollisionBeforeWith(other, pair){
+
+    }
 }
 
 export {EntityControl}

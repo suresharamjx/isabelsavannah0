@@ -12,9 +12,10 @@ class MatterJsPhysics {
         this.engine.gravity.y = 0;
         Matter.Events.on(this.engine, "collisionStart", x=>this.handleCollisionStart(x));
         Matter.Events.on(this.engine, "collisionEnd", x=>this.handleCollisionEnd(x));
+        Matter.Events.on(this.engine, "collisionActive", x=>this.handleCollisionActive(x));
 	}
 
-    handleCollisionStart(event){
+    handleCollisionPart(event, call){
         for(let pair of event.pairs){
             let bodyA = pair.bodyA;
             let bodyB = pair.bodyB;
@@ -29,14 +30,23 @@ class MatterJsPhysics {
             }
 
             if(controllerA.collisionControllerPriority < controllerB.collisionControllerPriority){
-                controllerB.handleCollisionWith(controllerA, pair);
+                call(controllerB, controllerA, pair);
             }else{
-                controllerA.handleCollisionWith(controllerB, pair);
+                call(controllerA, controllerB, pair);
             }
         }
     }
 
+    handleCollisionStart(event){
+        this.handleCollisionPart(event, (a, b, pair) => a.handleCollisionBeforeWith(b, pair));
+    }
+
+    handleCollisionActive(event){
+        this.handleCollisionPart(event, (a, b, pair) => a.handleCollisionActiveWith(b, pair));
+    }
+
     handleCollisionEnd(event){
+        this.handleCollisionPart(event, (a, b, pair) => a.handleCollisionAfterWith(b, pair));
     }
 
     render(){
@@ -95,6 +105,12 @@ class MatterJsPhysics {
 
     join(parts, controller){
 		let rootPart = Matter.Body.create();
+        this.rejoin(rootPart, parts);
+        this.controllers[rootPart.id] = controller;
+        return rootPart;
+    }
+
+    rejoin(rootPart, parts){
 		Matter.Body.setParts(rootPart, parts);
         // fix inertia because matterjs is broken
         let realAreaMoment = parts.map(x => {
@@ -103,8 +119,7 @@ class MatterJsPhysics {
             return x.area * Math.sqrt(dx*dx + dy*dy);
         }).reduce((x, y) => x+y, 0);
         Matter.Body.setInertia(rootPart, realAreaMoment);
-        this.controllers[rootPart.id] = controller;
-        return rootPart;
+
     }
 
     add(part){
@@ -134,6 +149,10 @@ class MatterJsPhysics {
 
     getLocation(partRef){
         return this.transformPosition(partRef.position);
+    }
+
+    getVelocity(partRef){
+        return this.transformPosition(partRef.velocity);
     }
 
     getId(partRef){
