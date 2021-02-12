@@ -19,7 +19,7 @@ class PartControl{
     }
 
     destroy(){
-        this.children.map(child => child.destroy);
+        this.children.map(child => child.destroy());
         this.parentControl.removePart(this.id);
     }
 }
@@ -44,6 +44,8 @@ class ShipControl extends EntityControl{
         this.score = 0;
 
         this.angleIntegralHistory = [];
+
+        this.dead = false;
     }
 
     spawn(x, y){
@@ -118,10 +120,13 @@ class ShipControl extends EntityControl{
                 thrusterList.splice(index, 1);
             }
         }
+        if(id == this.rootPartControl.id){
+            this.dead = true;
+        }
     }
 
     trim(){
-        this.physics.rejoin(this.shipRef, Object.values(this.partRefMap));
+        this.physics.rejoin(this.shipRef, Object.values(this.partRefMap), false);
     }
 
     doCollision(other, pair){
@@ -131,8 +136,11 @@ class ShipControl extends EntityControl{
         let myPartRef = this.partRefMap[myPart];
         let theirPartRef = other.partRefMap[theirPart];
 
-        var myStrength = this.collisionStrength(myPartRef, theirPartRef);
-        var theirStrength = other.collisionStrength(theirPartRef, myPartRef);
+        let myPhys = this.physMap[myPart];
+        let theirPhys = other.physMap[theirPart]
+
+        var myStrength = this.collisionStrength(myPartRef, theirPartRef) / myPhys.sides;
+        var theirStrength = other.collisionStrength(theirPartRef, myPartRef) / theirPhys.sides;
 
         if(myStrength == 0 && theirStrength == 0){
             myStrength = 1;
@@ -143,21 +151,21 @@ class ShipControl extends EntityControl{
         myStrength /= scale;
         theirStrength /= scale;
 
-        if(myStrength < 0.1){
-            myStrength = 0.1;
-            theirStrength = 0.9;
-        }else if(myStrength > 0.9){
-            myStrength = 0.9;
-            theirStrength = 0.1;
+        if(myStrength < 0.2){
+            myStrength = 0.2;
+            theirStrength = 0.8;
+        }else if(myStrength > 0.8){
+            myStrength = 0.8;
+            theirStrength = 0.2;
         }
 
         let myPartControl = this.partControlMap[myPart];
-        let theirPartControl = this.partControlMap[myPart];
+        let theirPartControl = other.partControlMap[theirPart];
 
         let totalDamage = Math.min(myPartControl.health/theirStrength, theirPartControl.health/myStrength);
 
-        myPartControl.damage(totalDamage*theirStrength/this.settings.ship.collisionDamagePerTick);
-        theirPartControl.damage(totalDamage*myStrength/this.settings.ship.collisionDamagePerTick);
+        myPartControl.damage(totalDamage*theirStrength*this.settings.ship.collisionDamagePerTick);
+        theirPartControl.damage(totalDamage*myStrength*this.settings.ship.collisionDamagePerTick);
     }
 
 
@@ -190,7 +198,8 @@ class ShipControl extends EntityControl{
         this.rightThrusters = [];
         this.leftThrusters = [];
 
-        for(let id in this.physMap){
+        for(var id in this.physMap){
+            id = +id;
             if(this.physMap[id].payload.type != "thruster"){
                 continue;
             }
@@ -307,9 +316,6 @@ class ShipControl extends EntityControl{
 
     destroy(){
         this.physics.remove(this.shipRef, true);
-        if(this.sim.controls.indexOf(this) == -1){
-            0()();
-        }
         this.sim.controls.splice(this.sim.controls.indexOf(this), 1);
         super.destroy();
     }

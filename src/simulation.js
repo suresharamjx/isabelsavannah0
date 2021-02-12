@@ -33,7 +33,7 @@ class Simulation{
         return ship;
     }
 
-    spawnFood(){
+    spawnFood(value){
         let x = randIntRange(this.field.xSize*-0.40, this.field.xSize*0.40);
         let y = randIntRange(this.field.ySize*-0.40, this.field.ySize*0.40);
         let food = new FoodControl(this);

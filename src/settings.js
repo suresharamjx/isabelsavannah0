@@ -25,19 +25,19 @@ let defaults = {
 
     ship: {
         initialFood: 0.03,
-        metabolisim: 0.00002,
+        metabolisim: .00002,
         agingBasis: 5000,
         scoringRatio: 0.001,
         scoreThreshold: 5,
         thrusterPowerMassRatio: 0.04,
         massMetabolisimMin: 10000,
-        collisionDamagePerTick: 1,//0.1,
+        collisionDamagePerTick: 1,
     },
 
     physicsTickTime: 0.01,
     displayTickTime: (1/120),
 
-    mutationChance: 0.01,
+    mutationChance: 0,
     mutationAmountMax: 0.2,
 }
 

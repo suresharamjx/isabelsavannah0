@@ -160,10 +160,10 @@ class Pool{
         let deadShips = [];
         let newLiveShips = [];
         for(let run of this.livePopulation){
-            if(run.control.storedFood > 0){
-                newLiveShips.push(run);
-            }else{
+            if(run.control.storedFood <= 0 || run.control.dead){
                 deadShips.push(run);
+            }else{
+                newLiveShips.push(run);
             }
         }
 
