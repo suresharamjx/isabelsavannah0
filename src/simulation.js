@@ -17,7 +17,7 @@ class Simulation{
 
     tick(){
         if(this.liveFoods.length < this.settings.food.concurrent){
-            this.spawnFood();
+            this.spawnRandomFood();
         }
         this.controls.map(x => x.tick());
         this.physics.tick(this.settings.physicsTickTime);
@@ -33,12 +33,17 @@ class Simulation{
         return ship;
     }
 
-    spawnFood(value){
-        let x = randIntRange(this.field.xSize*-0.40, this.field.xSize*0.40);
-        let y = randIntRange(this.field.ySize*-0.40, this.field.ySize*0.40);
-        let food = new FoodControl(this);
+    spawnFood(x, y, value){
+        let food = new FoodControl(this, value);
         food.spawn(x, y);
         this.controls.push(food);
+    }
+
+    spawnRandomFood(){
+        let x = randIntRange(this.field.xSize*-0.40, this.field.xSize*0.40);
+        let y = randIntRange(this.field.ySize*-0.40, this.field.ySize*0.40);
+        let value = this.settings.food.value;
+        this.spawnFood(x, y, value)
     }
 }
 

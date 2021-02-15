@@ -37,8 +37,8 @@ let defaults = {
     physicsTickTime: 0.01,
     displayTickTime: (1/120),
 
-    mutationChance: 0,
-    mutationAmountMax: 0.2,
+    mutationChance: 0.03,
+    mutationAmountMax: 0.4,
 }
 
 export {defaults}

@@ -88,7 +88,7 @@ class ShipControl extends EntityControl{
     handleCollisionBeforeWith(other, pair){
         if(other.type === 'food'){
             other.destroy();
-            this.storedFood += this.settings.food.value;
+            this.storedFood += other.value;
         }
     }
 
@@ -151,12 +151,12 @@ class ShipControl extends EntityControl{
         myStrength /= scale;
         theirStrength /= scale;
 
-        if(myStrength < 0.2){
-            myStrength = 0.2;
-            theirStrength = 0.8;
-        }else if(myStrength > 0.8){
-            myStrength = 0.8;
-            theirStrength = 0.2;
+        if(myStrength < 0.1){
+            myStrength = 0.1;
+            theirStrength = 0.9;
+        }else if(myStrength > 0.9){
+            myStrength = 0.9;
+            theirStrength = 0.1;
         }
 
         let myPartControl = this.partControlMap[myPart];
@@ -185,9 +185,20 @@ class ShipControl extends EntityControl{
 
     pickMovementTarget(){
         if(this.sim.liveFoods.length > 0){
-            let targetFood = randChoice(this.sim.liveFoods);
-            this.targetLocation = targetFood.getLocation();
-            targetFood.onDestroy(() => this.targetLocation = null);
+            var dist = Infinity;
+            let myLoc = this.physics.getLocation(this.shipRef);
+            var bestFood = null;
+            for(let food of this.sim.liveFoods){
+                let thisLoc = food.getLocation();
+                let thisDist = (myLoc.x - thisLoc.x)**2 + (myLoc.y - thisLoc.y)**2;
+                if(thisDist < dist){
+                    bestFood = food;
+                    dist = thisDist;
+                }
+            }
+
+            this.targetLocation = bestFood.getLocation();
+            bestFood.onDestroy(() => this.targetLocation = null);
             this.angleIntegralHistory = [];
         }
     }
@@ -239,16 +250,17 @@ class ShipControl extends EntityControl{
             let currentTheta = this.physics.getTheta(this.shipRef);
             let turn = modCircleDelta(targetTheta - currentTheta);
             let maxDeviation = Math.PI/32;
-            if(Math.abs(turn) < maxDeviation){
-                let powerScale = (maxDeviation-Math.abs(turn))/maxDeviation;
+
+            let perfectAngle = Math.PI/32;
+            let forwardAngle = Math.PI/8;
+
+            var forwardPower = 0;
+            if(Math.abs(turn) < perfectAngle){
+                this.powerThrusters(this.forwardThrusters, 1);
+            }else if(Math.abs(turn) < forwardAngle){
+                let powerScale = (Math.abs(turn) - perfectAngle) / (forwardAngle - perfectAngle);
                 this.powerThrusters(this.forwardThrusters, powerScale);
-                this.reverseThrusters.map(x => this.physics.deemph(this.partRefMap[x]));
-            }else if(Math.abs(turn) > (Math.PI - maxDeviation)){
-                let powerScale = (maxDeviation-(Math.PI-Math.abs(turn)))/maxDeviation;
-                this.powerThrusters(this.reverseThrusters, 1);
-                this.forwardThrusters.map(x => this.physics.deemph(this.partRefMap[x]));
             }else{
-                this.reverseThrusters.map(x => this.physics.deemph(this.partRefMap[x]));
                 this.forwardThrusters.map(x => this.physics.deemph(this.partRefMap[x]));
             }
 
@@ -315,8 +327,12 @@ class ShipControl extends EntityControl{
     }
 
     destroy(){
+        let pos = this.physics.getLocation(this.shipRef);
         this.physics.remove(this.shipRef, true);
         this.sim.controls.splice(this.sim.controls.indexOf(this), 1);
+        if(this.storedFood > 0){
+            this.sim.spawnFood(pos.x, pos.y, this.storedFood);
+        }
         super.destroy();
     }
 }

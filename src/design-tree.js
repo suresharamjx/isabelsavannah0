@@ -314,7 +314,7 @@ class ChildRelationship{
 
     static defaults(params = {}){
         return rangesMerge({
-            maxCount: new RangedInteger(1, new Range(1, 64, null)),
+            maxCount: new RangedInteger(4, new Range(1, 64, null)),
             symmetry: new RangedValue(0, new Range(-1, 1, null)),
             after: new RangedValue(0, new Range(-1, 1, null)),
             weight: new RangedValue(1, new Range(0, 1, null)),
@@ -382,7 +382,7 @@ let seedTree =
         new DesignPayload("none"), [
             new ChildRelationship(ChildRelationship.defaults({after: -0.2, maxCount: 1, sortKey: 25,}), 
                 new DesignBranch(DesignBranch.defaults({radius:170, sides:3}), new DesignPayload("none"), [
-                    new ChildRelationship(ChildRelationship.defaults({after: -0.5, maxCount: 2, sortKey: 75, symmetry: 1}),
+                    new ChildRelationship(ChildRelationship.defaults({after: -0.5, maxCount: 4, sortKey: 75}),
                         new DesignBranch(DesignBranch.defaults({radius:70, sides: 5}), new DesignPayload("none"), [
                             new ChildRelationship(ChildRelationship.defaults({maxCount: 4}),
                                 new DesignBranch(DesignBranch.defaults({radius:30, sides: 3}), new DesignPayload("thruster"), []))]
