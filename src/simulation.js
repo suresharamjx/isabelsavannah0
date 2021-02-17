@@ -9,6 +9,10 @@ class Simulation{
         this.field = settings.field;
         this.controls = [];
         this.liveFoods = [];
+        this.liveShips = [];
+        this.age = 0;
+
+        this.scheduledCallbacks = {};
     }
 
     stage(){
@@ -21,6 +25,14 @@ class Simulation{
         }
         this.controls.map(x => x.tick());
         this.physics.tick(this.settings.physicsTickTime);
+
+        this.age++;
+        if(this.age in this.scheduledCallbacks){
+            for(let callback of this.scheduledCallbacks[this.age]){
+                callback();
+            }
+            delete this.scheduledCallbacks[this.age];
+        }
     }
 
     spawnDesign(design){
@@ -44,6 +56,15 @@ class Simulation{
         let y = randIntRange(this.field.ySize*-0.40, this.field.ySize*0.40);
         let value = this.settings.food.value;
         this.spawnFood(x, y, value)
+    }
+
+    scheduleCallback(delay, callback){
+        let callTime = this.age + Math.max(Math.round(delay/this.settings.physicsTickTime), 1);
+        if(!(callTime in this.scheduledCallbacks)){
+            this.scheduledCallbacks[callTime] = [];
+        }
+
+        this.scheduledCallbacks[callTime].push(callback);
     }
 }
 

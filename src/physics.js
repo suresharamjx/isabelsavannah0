@@ -97,6 +97,29 @@ class MatterJsPhysics {
 		return body;
 	}
 
+    drawTurret(x, y, radius){
+        y = -y;
+
+        let angles = [0, Math.PI * (7/8), Math.PI, Math.PI * (9/8)];
+        let distances = [radius, radius, radius*1.2, radius];
+        let vertices = [];
+        for(let i = 0; i<angles.length; i++){
+            vertices.push({x: distances[i]*Math.sin(angles[i]), y: -1*distances[i]*Math.cos(angles[i])});
+        }
+
+        let body = Matter.Body.create({
+            position: {x: x, y: y},
+            mass: 0,
+            vertices: vertices,
+            frictionAir: 0,
+            render: {fillStyle: "#7796f2"},
+        });
+
+        body.collisionFilter.category = 0;
+
+        return body;
+    }
+
     generateForce(part, from, magnitude, direction){
         from = this.transformPosition(from);
         let directedForce = {x: magnitude*Math.sin(direction), y: -magnitude*Math.cos(direction)};
@@ -142,6 +165,10 @@ class MatterJsPhysics {
         return partRef.angle;
     }
 
+    setTheta(partRef, theta){
+        Matter.Body.setAngle(partRef, theta);
+    }
+
     getOmega(partRef){
         return partRef.angularVelocity;
     }
@@ -175,7 +202,23 @@ class MatterJsPhysics {
     }
 
     setLocation(partRef, x, y){
-        partRef.position = {x: x, y: -y};
+        Matter.Body.setPosition(partRef, {x: x, y: -y});
+    }
+
+    setLocationPair(partRef, pair){
+        Matter.Body.setPosition(partRef, {x: pair.x, y: -pair.y});
+    }
+
+    disableCollision(partRef){
+        partRef.collisionFilter.category = 0;
+    }
+
+    enableCollision(partRef){
+        partRef.collisionFilter.category = 1;
+    }
+
+    setVelocity(partRef, velPair){
+        Matter.Body.setVelocity(partRef, {x: velPair.x, y: -velPair.y});
     }
 }
 

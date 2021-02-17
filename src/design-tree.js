@@ -36,7 +36,7 @@ function reproduceDesign(a, b, settings){
 
 function reproducePayload(a, b, settings){
     if(Math.random() < settings.mutationChance){
-        return new DesignPayload(randChoice(['none', 'thruster']));
+        return new DesignPayload(randChoice(['none', 'thruster', 'turret']));
     }else{
         return Math.random() < 0.5 ? a : b;
     }
@@ -78,7 +78,7 @@ function reproduceTree(a, b, settings){
             let newBranchValues = reproduceValues(DesignBranch.defaults(), DesignBranch.defaults(), settings);
             newRelationshipValues.sortKey.value = key;
 
-            let newChild = new ChildRelationship({}, new DesignBranch({}, new DesignPayload(randChoice(["none", "thruster"])), []));
+            let newChild = new ChildRelationship({}, new DesignBranch({}, new DesignPayload(randChoice(["none", "thruster", "turret"])), []));
             newChild.values = newRelationshipValues;
             newChild.child.values = newBranchValues;
 
@@ -379,11 +379,11 @@ function sideRadius(sides, radius){
 
 let seedTree = 
     new DesignBranch(DesignBranch.defaults({radius:90, sides: 8}), 
-        new DesignPayload("none"), [
+        new DesignPayload("turret"), [
             new ChildRelationship(ChildRelationship.defaults({after: -0.2, maxCount: 1, sortKey: 25,}), 
                 new DesignBranch(DesignBranch.defaults({radius:170, sides:3}), new DesignPayload("none"), [
                     new ChildRelationship(ChildRelationship.defaults({after: -0.5, maxCount: 4, sortKey: 75}),
-                        new DesignBranch(DesignBranch.defaults({radius:70, sides: 5}), new DesignPayload("none"), [
+                        new DesignBranch(DesignBranch.defaults({radius:70, sides: 5}), new DesignPayload("turret"), [
                             new ChildRelationship(ChildRelationship.defaults({maxCount: 4}),
                                 new DesignBranch(DesignBranch.defaults({radius:30, sides: 3}), new DesignPayload("thruster"), []))]
                         ))])),

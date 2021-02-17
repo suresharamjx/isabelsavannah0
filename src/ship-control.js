@@ -1,5 +1,6 @@
 import {EntityControl} from './entity-control.js'
-import {randChoice} from './rand.js'
+import {BulletControl} from './bullet-control.js'
+import {randChoice, randInt} from './rand.js'
 import {navigate, modCircle, modCircleDelta} from './geometry.js'
 
 class PartControl{
@@ -24,6 +25,65 @@ class PartControl{
     }
 }
 
+class TurretControl{
+    constructor(parentPartRef, shipControl, restingTheta){
+        this.parentPartRef = parentPartRef;
+        this.shipControl = shipControl;
+        this.physics = shipControl.physics;
+        this.restingTheta = restingTheta;
+        this.settings = shipControl.settings;
+        this.cooldown = 0;
+    }
+
+    spawn(x, y, radius){
+        this.displayBlock = this.physics.drawTurret(x, y, radius);
+        this.physics.setLocationPair(this.displayBlock, this.physics.getLocation(this.parentPartRef));
+        this.physics.setTheta(this.displayBlock, modCircle(this.restingTheta + this.physics.getTheta(this.shipControl.shipRef)));
+        this.currentTheta = this.restingTheta;
+        this.physics.add(this.displayBlock);
+    }
+
+    tick(){
+        var targetRelativeTheta = null;
+        var hasTarget = false;
+        if(this.shipControl.shootingTarget){
+            let targetAbsoluteTheta = navigate(this.physics.getLocation(this.parentPartRef), this.shipControl.shootingTarget.getLocation())
+            targetRelativeTheta = modCircleDelta(targetAbsoluteTheta - this.physics.getTheta(this.shipControl.shipRef));
+            hasTarget = true;
+        }else{
+            targetRelativeTheta = this.restingTheta;
+        }
+
+        let omegaMaxTick = this.settings.turret.omegaMax * this.settings.physicsTickTime;
+        let delta = Math.min(omegaMaxTick, Math.max(-omegaMaxTick, (targetRelativeTheta - this.currentTheta)));
+        this.currentTheta += delta;
+
+        this.physics.setLocationPair(this.displayBlock, this.physics.getLocation(this.parentPartRef));
+        this.physics.setTheta(this.displayBlock, modCircle(this.physics.getTheta(this.shipControl.shipRef) + this.currentTheta));
+
+        if(this.cooldown > 0){
+            this.cooldown--;
+        }else if(hasTarget && Math.abs(this.currentTheta - targetRelativeTheta) < this.settings.turret.spread/2){
+            this.cooldown = randInt(this.settings.turret.maxCooldown);
+            this.fire();
+        }
+    }
+
+    fire(){
+        let theta = modCircle(this.currentTheta + this.physics.getTheta(this.shipControl.shipRef));
+        let spread = (Math.random() - 0.5)*this.settings.turret.spread;
+        let loc = this.physics.getLocation(this.parentPartRef);
+
+        let bullet = new BulletControl(this.shipControl.sim, this.settings.bullet.massDamageRatio * this.physics.getMass(this.parentPartRef));
+        bullet.spawn(loc.x, loc.y, modCircle(theta+spread));
+    }
+
+    destroy(){
+        this.physics.remove(this.displayBlock);
+    }
+}
+
+
 class ShipControl extends EntityControl{
     constructor(physTree, designMeta, sim, settings){
         super(sim, 'ship');
@@ -38,6 +98,7 @@ class ShipControl extends EntityControl{
         this.partRefMap = {};
         this.angleOffsets = {};
         this.partControlMap = {};
+        this.turretControlMap = {};
 
         this.storedFood = 0;
         this.age = 0;
@@ -48,17 +109,25 @@ class ShipControl extends EntityControl{
         this.dead = false;
     }
 
+    getLocation(){
+        return this.physics.getLocation(this.shipRef);
+    }
+
     spawn(x, y){
         let controlCollector = []
         this.partRefs = this.spawnBlocksAt(x, y, 0, this.physTree, controlCollector).flat(Infinity);
         this.rootPartControl = controlCollector[0];
         this.shipRef = this.physics.join(this.partRefs, this);
+        this.id = this.physics.getId(this.shipRef);
         this.mapThrusters();
+        this.mapTurrets();
         this.physics.add(this.shipRef);
 
         let tsets = [this.reverseThrusters, this.forwardThrusters, this.rightThrusters, this.leftThrusters];
         this.storedFood = this.settings.ship.initialFood * this.physics.getMass(this.shipRef);
         tsets.map(y=>y.map(x => this.physics.deemph(this.partRefMap[x])));
+
+        this.sim.liveShips.push(this);
     }
 
 	spawnBlocksAt(turtleX, turtleY, turtleTheta, physTree, parentsChildCollector){
@@ -89,6 +158,13 @@ class ShipControl extends EntityControl{
         if(other.type === 'food'){
             other.destroy();
             this.storedFood += other.value;
+        }else if(other.type === 'bullet'){
+            let myPart = this.physics.getId(pair.bodyA);
+            let myPartControl = this.partControlMap[myPart];
+            if(myPartControl){
+                myPartControl.damage(other.damage);
+            }
+            other.destroy();
         }
     }
 
@@ -114,6 +190,12 @@ class ShipControl extends EntityControl{
         delete this.partRefMap[id];
         delete this.angleOffsets[id];
         delete this.partControlMap[id];
+
+        if(id in this.turretControlMap){
+            this.turretControlMap[id].destroy();
+            delete this.turretControlMap[id];
+        }
+
         for(let thrusterList of [this.forwardThrusters, this.reverseThrusters, this.rightThrusters, this.leftThrusters]){
             let index = thrusterList.indexOf(id);
             if(index >= 0){
@@ -203,6 +285,42 @@ class ShipControl extends EntityControl{
         }
     }
 
+    pickShootingTarget(){
+        if(this.sim.liveShips.length > 0){
+            var dist = this.settings.turret.range**2;
+            let myLoc = this.physics.getLocation(this.shipRef);
+            var bestTarget = null;
+            for(let target of this.sim.liveShips){
+                if(target.id == this.id){
+                    continue;
+                }
+                let thisLoc = target.getLocation();
+                let thisDist = (myLoc.x - thisLoc.x)**2 + (myLoc.y - thisLoc.y)**2;
+                if(thisDist < dist){
+                    bestTarget = target;
+                    dist = thisDist;
+                }
+            }
+
+            this.shootingTarget = bestTarget;
+        }
+    }
+
+
+    mapTurrets(){
+        for(var id in this.physMap){
+            id = +id;
+            if(this.physMap[id].payload.type != "turret"){
+                continue;
+            }
+
+            let control = new TurretControl(this.partRefMap[id], this, this.angleOffsets[id]);
+            let loc = this.physics.getLocation(this.partRefMap[id]);
+            control.spawn(loc.x, loc.y, this.physMap[id].radius*1.2);
+            this.turretControlMap[id] = control;
+        }
+    }
+
     mapThrusters(){
         this.forwardThrusters = [];
         this.reverseThrusters = [];
@@ -224,7 +342,7 @@ class ShipControl extends EntityControl{
             let angleDeltaAbs = Math.abs(angleDelta);
             let thrustAngleAbs = Math.abs(modCircleDelta(thrustAngle));
 
-            if(angleDeltaAbs < Math.PI/4 || angleDeltaAbs > (3*Math.PI/4)){
+            if(angleDeltaAbs < Math.PI/8 || angleDeltaAbs > (7*Math.PI/8)){
                 if(thrustAngleAbs <= Math.PI/2){
                     this.forwardThrusters.push(id);
                 }else{
@@ -243,6 +361,10 @@ class ShipControl extends EntityControl{
     tick(){
         if(!this.targetLocation){
             this.pickMovementTarget();
+        }
+
+        if(this.age % this.settings.ship.shootingTargetInterval){
+            this.pickShootingTarget();
         }
 
         if(this.targetLocation){
@@ -265,6 +387,10 @@ class ShipControl extends EntityControl{
             }
 
             this.angularControl();
+        }
+
+        for(let turret of Object.values(this.turretControlMap)){
+            turret.tick();
         }
 
         this.runFood()
@@ -330,8 +456,12 @@ class ShipControl extends EntityControl{
         let pos = this.physics.getLocation(this.shipRef);
         this.physics.remove(this.shipRef, true);
         this.sim.controls.splice(this.sim.controls.indexOf(this), 1);
+        this.sim.liveShips.splice(this.sim.liveShips.indexOf(this), 1);
         if(this.storedFood > 0){
             this.sim.spawnFood(pos.x, pos.y, this.storedFood);
+        }
+        for(let turretControl of Object.values(this.turretControlMap)){
+            turretControl.destroy();
         }
         super.destroy();
     }
