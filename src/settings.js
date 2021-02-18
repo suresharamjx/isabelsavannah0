@@ -56,7 +56,7 @@ let defaults = {
     physicsTickTime: 0.01,
     displayTickTime: (1/120),
 
-    mutationChance: 0.015,
+    mutationChance: 0.01,
     mutationAmountMax: 0.4,
 }
 

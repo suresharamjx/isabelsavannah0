@@ -87,7 +87,7 @@ class MatterJsPhysics {
             mass: physBlock.mass,
             vertices: vertices,
             sensor: !!extraOptions.sensor,
-            frictionAir: extraOptions.frictionless ? 0 : 0.01,
+            frictionAir: extraOptions.frictionless ? 0 : 0.001,
             render: {
                 fillStyle: extraOptions.fillStyle || "#3461eb",
             }

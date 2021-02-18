@@ -272,7 +272,7 @@ class ShipControl extends EntityControl{
             var bestFood = null;
             for(let food of this.sim.liveFoods){
                 let thisLoc = food.getLocation();
-                let thisDist = (myLoc.x - thisLoc.x)**2 + (myLoc.y - thisLoc.y)**2;
+                let thisDist = (myLoc.x - thisLoc.x)**2 + (myLoc.y - thisLoc.y)**2/food.value;
                 if(thisDist < dist){
                     bestFood = food;
                     dist = thisDist;
