@@ -5,7 +5,7 @@ let defaults = {
         omega: .1,
         concurrent: 20,
         initial: 3,
-        value: 2000,
+        value: 5000,
     },
 
     field: {
@@ -24,7 +24,7 @@ let defaults = {
     },
 
     ship: {
-        initialFood: 0.03,
+        initialFood: 0.08,
         metabolisim: .00001,
         agingBasis: 5000,
         scoringRatio: 0.001,
@@ -56,7 +56,7 @@ let defaults = {
     physicsTickTime: 0.01,
     displayTickTime: (1/120),
 
-    mutationChance: 0.01,
+    mutationChance: 0.015,
     mutationAmountMax: 0.4,
 }
 
